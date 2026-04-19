@@ -1,10 +1,11 @@
 // src/components/inventory/forms/VariantCard.tsx
 import { useState, useRef, useMemo } from "react";
-import { Trash2, ChevronDown, Check, Search, Plus } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 import { COLOR_MAP, getColorNameByHex } from "@/common/colors";
 import { useCalculations } from "@/hooks/inventory/useCalculations";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { CATEGORY_VARIANT_CONFIG } from "@/common/configs/variant-mapping";
+import { HybridDropdown } from "@/components/ui/HybridDropdown";
 import type { Variant, CategoryType } from "@/types/inventory";
 
 interface VariantCardProps {
@@ -28,7 +29,6 @@ export const VariantCard = ({
 }: VariantCardProps) => {
   const [isColorOpen, setIsColorOpen] = useState(false);
   const [openAttrIndex, setOpenAttrIndex] = useState<number | null>(null);
-  const [colorSearch, setColorSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const finance = useCalculations(
@@ -61,12 +61,6 @@ export const VariantCard = ({
     };
     onUpdate({ attributes: newAttributes });
   };
-
-  const filteredColors = useMemo(() => {
-    return Object.entries(COLOR_MAP).filter(([_, name]) =>
-      name.toLowerCase().includes(colorSearch.toLowerCase()),
-    );
-  }, [colorSearch]);
 
   const labelStyle =
     "text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block tracking-wider";
@@ -106,8 +100,8 @@ export const VariantCard = ({
         </button>
       </div>
 
-      {/* Row 1: Color + Expanded Processor/RAM Fields */}
       <div className="grid grid-cols-12 gap-4" ref={dropdownRef}>
+        {/* Color Column */}
         <div className="col-span-1">
           <label className={labelStyle}>Hex</label>
           <input
@@ -123,125 +117,44 @@ export const VariantCard = ({
           />
         </div>
 
-        <div className="col-span-3 relative">
-          <label className={labelStyle}>Color Finish</label>
-          <div
-            onClick={() => setIsColorOpen(true)}
-            className={`${inputStyle} flex justify-between items-center cursor-pointer h-10`}
-          >
-            <span
-              className={
-                variant.colorName
-                  ? "text-slate-800 dark:text-slate-200"
-                  : "text-slate-400"
-              }
-            >
-              {variant.colorName || "Select..."}
-            </span>
-            <ChevronDown
-              size={14}
-              className={`text-slate-400 transition-transform ${isColorOpen ? "rotate-180" : ""}`}
-            />
-          </div>
-          {isColorOpen && (
-            <div className="absolute top-full left-0 w-full mt-2 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-xl p-2 animate-in zoom-in-95 duration-150">
-              <div className="relative mb-2">
-                <Search
-                  size={12}
-                  className="absolute left-2 top-2.5 text-slate-500"
-                />
-                <input
-                  autoFocus
-                  placeholder="Search..."
-                  value={colorSearch}
-                  onChange={(e) => setColorSearch(e.target.value)}
-                  className="w-full pl-7 pr-2 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs outline-none"
-                />
-              </div>
-              <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                {filteredColors.map(([hex, name]) => (
-                  <button
-                    key={hex}
-                    type="button"
-                    onClick={() => {
-                      onUpdate({ colorName: name, color: hex });
-                      setIsColorOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10 flex items-center justify-between group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full border border-slate-200"
-                        style={{ backgroundColor: hex }}
-                      />
-                      <span className="text-slate-800 dark:text-slate-200 group-hover:text-indigo-600">
-                        {name}
-                      </span>
-                    </div>
-                    {variant.colorName === name && (
-                      <Check size={12} className="text-indigo-500" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Color Dropdown using HybridDropdown */}
+        <HybridDropdown
+          label="Color Finish"
+          value={variant.colorName || ""}
+          options={Object.values(COLOR_MAP)}
+          isOpen={isColorOpen}
+          onToggle={() => setIsColorOpen(!isColorOpen)}
+          onChange={(val) => {
+            onUpdate({ colorName: val });
+            // Sync hex if a known color name is selected
+            const foundHex = Object.keys(COLOR_MAP).find(
+              (key) => COLOR_MAP[key] === val,
+            );
+            if (foundHex) onUpdate({ color: foundHex, colorName: val });
+          }}
+          className="col-span-3"
+          placeholder="Select Color"
+        />
 
-        {/* Dynamic Attributes: Expanded Processor (col-span-5) and balanced RAM (col-span-3) */}
+        {/* Dynamic Attributes using HybridDropdown */}
         {config.attributes.map((attrConfig, idx) => (
-          <div
+          <HybridDropdown
             key={idx}
+            label={attrConfig.key}
+            value={variant.attributes?.[idx]?.value || ""}
+            options={attrConfig.options}
+            isOpen={openAttrIndex === idx}
+            onToggle={() =>
+              setOpenAttrIndex(openAttrIndex === idx ? null : idx)
+            }
+            onChange={(val) => updateAttribute(idx, val)}
             className={
               attrConfig.key.toLowerCase().includes("processor")
-                ? "col-span-5 relative"
-                : "col-span-3 relative"
+                ? "col-span-5"
+                : "col-span-3"
             }
-          >
-            <label className={labelStyle}>{attrConfig.key}</label>
-            <div className="relative group">
-              <input
-                className={inputStyle}
-                placeholder={`Type or Select ${attrConfig.key}...`}
-                value={variant.attributes?.[idx]?.value || ""}
-                onChange={(e) => updateAttribute(idx, e.target.value)}
-                onFocus={() => {
-                  setOpenAttrIndex(idx);
-                }}
-              />
-              <ChevronDown
-                size={14}
-                className={`absolute right-2 top-3 text-slate-500 cursor-pointer transition-transform ${openAttrIndex === idx ? "rotate-180" : ""}`}
-                onClick={() =>
-                  setOpenAttrIndex(openAttrIndex === idx ? null : idx)
-                }
-              />
-            </div>
-            {openAttrIndex === idx && (
-              <div className="absolute top-full left-0 w-full mt-2 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-xl p-1 animate-in zoom-in-95 duration-150">
-                <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                  {attrConfig.options.map((opt) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => {
-                        updateAttribute(idx, opt);
-                        setOpenAttrIndex(null);
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/10 flex items-center justify-between transition-colors"
-                    >
-                      <span className="text-slate-800 dark:text-slate-300 font-medium">
-                        {opt}
-                      </span>
-                      {variant.attributes?.[idx]?.value === opt && (
-                        <Check size={12} className="text-emerald-500" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+            placeholder={`Select ${attrConfig.key}`}
+          />
         ))}
       </div>
 
@@ -285,7 +198,7 @@ export const VariantCard = ({
         </div>
       </div>
 
-      {/* RESTORED GST BREAKDOWN TABLE (Full Consistent Visibility) */}
+      {/* Financial Breakdown Table */}
       <div className="bg-slate-50 dark:bg-black/40 rounded-xl p-5 border border-slate-200 dark:border-slate-800 space-y-3">
         <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">
           GST PRICE BREAKDOWN ({salesGst}%)

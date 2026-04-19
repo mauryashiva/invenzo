@@ -1,9 +1,9 @@
+// src/components/inventory/forms/DynamicSpecs.tsx
 import { useState, useRef, useMemo } from "react";
 import type { KeyboardEvent } from "react";
 import { Plus, Trash2, ChevronDown, Check, Zap } from "lucide-react";
 import { formatTitleCase } from "@/lib/utils";
 import { useClickOutside } from "@/hooks/use-click-outside";
-// Import the Central Hub logic
 import { getSuggestionsByCategory } from "@/common/specs";
 import type { SpecEntry } from "@/types/inventory";
 
@@ -29,7 +29,7 @@ export const DynamicSpecs = ({
   const [localSearch, setLocalSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 🔄 Dynamic Data Injection: Automatically swaps data based on the category prop
+  // 🔄 Automatically switches to TABLET_KEYS / TABLET_SUGGESTIONS when category is "Tablet"
   const categoryData = useMemo(
     () => getSuggestionsByCategory(category),
     [category],
@@ -55,7 +55,6 @@ export const DynamicSpecs = ({
     handleUpdate(index, field, val);
     setActiveDropdown(null);
     setLocalSearch("");
-
     if (field === "key") {
       setTimeout(
         () => document.getElementById(`value-input-${index}`)?.focus(),
@@ -79,20 +78,17 @@ export const DynamicSpecs = ({
     }
   };
 
-  // 🧠 Smart Filter Logic: Uses the dynamic categoryData instead of hardcoded imports
   const suggestions = useMemo(() => {
     if (!activeDropdown) return [];
     const { index, type } = activeDropdown;
     const currentInput = localSearch.toLowerCase();
 
     if (type === "key") {
-      // Pulls from LAPTOP_KEYS or SMARTPHONE_KEYS automatically
       return categoryData.keys.filter((k) =>
         k.toLowerCase().includes(currentInput),
       );
     } else {
       const selectedKey = specs[index].key;
-      // Pulls from LAPTOP_SUGGESTIONS or SMARTPHONE_SUGGESTIONS automatically
       const possibleValues = categoryData.values[selectedKey] || [];
       return possibleValues.filter((v) =>
         v.toLowerCase().includes(currentInput),
@@ -100,8 +96,11 @@ export const DynamicSpecs = ({
     }
   }, [activeDropdown, localSearch, specs, categoryData]);
 
+  const inputBase =
+    "w-full py-3 bg-transparent text-[13px] outline-none placeholder:font-normal placeholder:text-slate-400";
+
   return (
-    <section className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-6">
+    <section className="p-6 bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-6">
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
         <div className="flex items-center gap-2">
           <Zap size={16} className="text-amber-500 fill-amber-500/20" />
@@ -109,11 +108,9 @@ export const DynamicSpecs = ({
             {category} Specifications
           </h2>
         </div>
-        <div className="flex gap-2">
-          <span className="text-[10px] font-bold text-indigo-500 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-md uppercase tracking-widest">
-            {category} Mode
-          </span>
-        </div>
+        <span className="text-[10px] font-bold text-indigo-500 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-md uppercase tracking-widest">
+          {category} Mode
+        </span>
       </div>
 
       <div
@@ -130,6 +127,7 @@ export const DynamicSpecs = ({
               ${committing?.index === index ? "border-emerald-500 ring-4 ring-emerald-500/10" : "border-slate-200 dark:border-slate-800 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500"}
             `}
             >
+              {/* KEY FIELD */}
               <div className="relative w-[42%] border-r border-slate-200 dark:border-slate-800">
                 <div className="flex items-center px-3">
                   <input
@@ -141,25 +139,38 @@ export const DynamicSpecs = ({
                     onKeyDown={(e) => handleKeyDown(e, index, "key")}
                     onChange={(e) => handleUpdate(index, "key", e.target.value)}
                     placeholder="Property"
-                    className="w-full py-3 bg-transparent text-[13px] font-bold text-slate-700 dark:text-slate-300 outline-none placeholder:font-normal placeholder:text-slate-400"
+                    className={`${inputBase} font-bold text-slate-700 dark:text-slate-300`}
                   />
-                  <ChevronDown
-                    size={14}
-                    className={`text-slate-400 transition-transform ${activeDropdown?.index === index && activeDropdown.type === "key" ? "rotate-180" : ""}`}
-                  />
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveDropdown(
+                        activeDropdown?.index === index &&
+                          activeDropdown.type === "key"
+                          ? null
+                          : { index, type: "key" },
+                      );
+                    }}
+                    className="cursor-pointer p-1 hover:text-indigo-500 transition-colors"
+                  >
+                    <ChevronDown
+                      size={14}
+                      className={`text-slate-400 transition-transform ${activeDropdown?.index === index && activeDropdown.type === "key" ? "rotate-180" : ""}`}
+                    />
+                  </div>
                 </div>
 
                 {activeDropdown?.index === index &&
                   activeDropdown.type === "key" &&
                   suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 w-64 mt-2 z-70 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-xl p-1 animate-in slide-in-from-top-2 duration-150 shadow-indigo-500/10">
+                    <div className="absolute top-full left-0 w-64 mt-2 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-xl p-1 animate-in zoom-in-95 duration-150">
                       <div className="max-h-52 overflow-y-auto custom-scrollbar">
                         {suggestions.map((k) => (
                           <button
                             key={k}
                             type="button"
                             onClick={() => selectSuggestion(index, "key", k)}
-                            className="w-full text-left px-3 py-2 text-[12px] rounded-lg text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 flex justify-between items-center group/item transition-colors"
+                            className="w-full text-left px-3 py-2 text-[12px] rounded-lg text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 flex justify-between items-center transition-colors"
                           >
                             {k}{" "}
                             {spec.key === k && (
@@ -172,11 +183,11 @@ export const DynamicSpecs = ({
                   )}
               </div>
 
+              {/* VALUE FIELD */}
               <div className="relative flex-1">
                 <div className="flex items-center px-3">
                   <input
                     id={`value-input-${index}`}
-                    type="text"
                     value={spec.value}
                     onFocus={() => {
                       setActiveDropdown({ index, type: "value" });
@@ -187,27 +198,43 @@ export const DynamicSpecs = ({
                       handleUpdate(index, "value", e.target.value)
                     }
                     placeholder="Value..."
-                    className="w-full py-3 bg-transparent text-[13px] text-slate-800 dark:text-slate-100 outline-none"
+                    className={`${inputBase} text-slate-800 dark:text-slate-100`}
                   />
-                  <ChevronDown
-                    size={14}
-                    className={`text-slate-400 transition-transform ${activeDropdown?.index === index && activeDropdown.type === "value" ? "rotate-180" : ""}`}
-                  />
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveDropdown(
+                        activeDropdown?.index === index &&
+                          activeDropdown.type === "value"
+                          ? null
+                          : { index, type: "value" },
+                      );
+                    }}
+                    className="cursor-pointer p-1 hover:text-emerald-500 transition-colors"
+                  >
+                    <ChevronDown
+                      size={14}
+                      className={`text-slate-400 transition-transform ${activeDropdown?.index === index && activeDropdown.type === "value" ? "rotate-180" : ""}`}
+                    />
+                  </div>
                 </div>
 
                 {activeDropdown?.index === index &&
                   activeDropdown.type === "value" &&
                   suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 w-full mt-2 z-70 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-xl p-1 animate-in slide-in-from-top-2 duration-150 shadow-emerald-500/10">
+                    <div className="absolute top-full left-0 w-full mt-2 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-xl p-1 animate-in zoom-in-95 duration-150">
                       <div className="max-h-52 overflow-y-auto custom-scrollbar">
                         {suggestions.map((v) => (
                           <button
                             key={v}
                             type="button"
                             onClick={() => selectSuggestion(index, "value", v)}
-                            className="w-full text-left px-3 py-2 text-[12px] rounded-lg text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                            className="w-full text-left px-3 py-2 text-[12px] rounded-lg text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 flex items-center justify-between transition-colors"
                           >
-                            {v}
+                            {v}{" "}
+                            {spec.value === v && (
+                              <Check size={12} className="text-emerald-500" />
+                            )}
                           </button>
                         ))}
                       </div>
