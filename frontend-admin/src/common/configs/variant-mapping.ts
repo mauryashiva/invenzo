@@ -1,3 +1,4 @@
+// src/common/configs/variant-mapping.ts
 import { LAPTOP_SUGGESTIONS } from "../specs/laptop";
 
 export interface VariantAttrConfig {
@@ -49,6 +50,10 @@ export const CATEGORY_VARIANT_CONFIG: Record<string, CategoryMapping> = {
       {
         key: "Connectivity",
         options: ["Wi-Fi Only", "Wi-Fi + Cellular (5G)", "Wi-Fi + 4G"],
+      },
+      {
+        key: "RAM",
+        options: ["4GB", "8GB", "12GB", "16GB", "24GB"], // Added RAM for Tablet
       },
       {
         key: "Storage",
