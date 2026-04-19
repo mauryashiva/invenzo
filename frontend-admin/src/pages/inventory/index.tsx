@@ -1,25 +1,17 @@
-import { useState } from "react";
 import { useProductForm } from "@/hooks/inventory/useProductForm";
 import { ProductInfo } from "@/components/inventory/forms/ProductInfo";
 import { DynamicSpecs } from "@/components/inventory/forms/DynamicSpecs";
 import { VariantCard } from "@/components/inventory/forms/VariantCard";
 import { ProfitDashboard } from "@/components/inventory/forms/ProfitDashboard";
-import { StockManager } from "@/components/inventory/forms/StockManager"; // New Component
+import { StockManager } from "@/components/inventory/forms/StockManager";
 import { PackagePlus, Save, LayoutGrid } from "lucide-react";
-import type {
-  InventoryProduct,
-  Variant,
-  SpecEntry,
-  StockUnit,
-} from "@/types/inventory";
+import type { Variant, SpecEntry, StockUnit } from "@/types/inventory";
 
 export default function InventoryPage() {
   const { state, dispatch } = useProductForm();
 
-  // Local state for UI category switching
-  const [activeCategory, setActiveCategory] = useState<
-    "smartphone" | "laptop" | "tablet"
-  >("smartphone");
+  // 💡 Note: Local 'activeCategory' state removed to ensure
+  // global 'state.category' controls the "Morphing" logic.
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-in fade-in duration-500">
@@ -83,11 +75,11 @@ export default function InventoryPage() {
                 <button
                   key={cat}
                   onClick={() => {
-                    setActiveCategory(cat);
+                    // 🔄 This triggers the key migration (RAM -> Processor) in the reducer
                     dispatch({ type: "SET_CATEGORY", payload: cat });
                   }}
                   className={`flex-1 py-1.5 px-4 text-xs font-bold rounded-lg capitalize transition-all ${
-                    activeCategory === cat
+                    state.category === cat
                       ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
                       : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                   }`}
@@ -100,17 +92,17 @@ export default function InventoryPage() {
         </div>
       </section>
 
-      {/* 🏷️ Section 2: Product Identity (Fixing the Prop Error) */}
+      {/* 🏷️ Section 2: Product Identity */}
       <ProductInfo
         data={state}
-        onUpdate={(data: Partial<InventoryProduct>) =>
+        onUpdate={(data) =>
           dispatch({ type: "UPDATE_BASE_INFO", payload: data })
         }
       />
 
-      {/* ⚙️ Section 3: Technical Specs */}
+      {/* ⚙️ Section 3: Technical Specs (Now morphs correctly) */}
       <DynamicSpecs
-        category={activeCategory}
+        category={state.category}
         specs={state.specs}
         onUpdate={(newSpecs: SpecEntry[]) =>
           dispatch({ type: "SET_SPECS", payload: newSpecs })
@@ -133,9 +125,10 @@ export default function InventoryPage() {
 
         {state.variants.map((v: Variant, idx: number) => (
           <VariantCard
-            key={idx}
+            key={`${state.category}-${idx}`} // Force fresh render when category changes
             index={idx}
             variant={v}
+            category={state.category}
             purchaseGst={state.purchaseGst}
             salesGst={state.salesGst}
             onUpdate={(data: Partial<Variant>) =>
@@ -146,7 +139,7 @@ export default function InventoryPage() {
         ))}
       </div>
 
-      {/* 📦 Section 5: Stock Units (Serial & IMEI Management) */}
+      {/* 📦 Section 5: Stock Units */}
       <StockManager
         variants={state.variants}
         units={state.stockUnits || []}
@@ -162,7 +155,7 @@ export default function InventoryPage() {
         }
       />
 
-      {/* 📊 Section 6: Profit Health Dashboard */}
+      {/* 📊 Section 6: Profit Dashboard */}
       <ProfitDashboard
         purchasePrice={state.variants[0]?.baseCost || 0}
         sellingPrice={state.variants[0]?.sellingPrice || 0}

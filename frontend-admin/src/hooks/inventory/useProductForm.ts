@@ -1,10 +1,10 @@
 import { useReducer } from "react";
+import { CATEGORY_VARIANT_CONFIG } from "@/common/configs/variant-mapping";
 import type {
   InventoryProduct,
   CategoryType,
   Variant,
   SpecEntry,
-  StockUnit, // Ensure this is exported from your types
 } from "@/types/inventory";
 
 type Action =
@@ -35,8 +35,10 @@ const initialState: InventoryProduct = {
       sku: `SKU-${Date.now()}`,
       color: "#000000",
       colorName: "Black",
-      ram: "8GB",
-      storage: "128GB",
+      attributes: [
+        { key: "RAM", value: "8GB" },
+        { key: "Storage", value: "128GB" },
+      ],
       baseCost: 0,
       sellingPrice: 0,
       stock: 0,
@@ -44,15 +46,33 @@ const initialState: InventoryProduct = {
       images: [],
     },
   ],
-  stockUnits: [], // Initialized for IMEI/Serial tracking
+  stockUnits: [],
 };
 
 export function useProductForm() {
   const [state, dispatch] = useReducer(
     (state: InventoryProduct, action: Action): InventoryProduct => {
       switch (action.type) {
-        case "SET_CATEGORY":
-          return { ...state, category: action.payload };
+        case "SET_CATEGORY": {
+          const newCategory = action.payload;
+          const config = CATEGORY_VARIANT_CONFIG[newCategory];
+
+          // 🔄 MIGRATION LOGIC: Physically update keys for all existing variants
+          // This ensures the VariantCard labels change instantly when the category switches.
+          const morphedVariants = state.variants.map((v) => ({
+            ...v,
+            attributes: [
+              { key: config.attr1, value: v.attributes[0]?.value || "" },
+              { key: config.attr2, value: v.attributes[1]?.value || "" },
+            ],
+          }));
+
+          return {
+            ...state,
+            category: newCategory,
+            variants: morphedVariants,
+          };
+        }
 
         case "UPDATE_BASE_INFO":
           return { ...state, ...action.payload };
@@ -69,29 +89,35 @@ export function useProductForm() {
           return { ...state, variants: newVariants };
         }
 
-        case "ADD_VARIANT":
-          return {
-            ...state,
-            variants: [
-              ...state.variants,
-              {
-                ...initialState.variants[0],
-                sku: `SKU-${Date.now()}-${state.variants.length}`,
-              },
+        case "ADD_VARIANT": {
+          const config = CATEGORY_VARIANT_CONFIG[state.category];
+
+          const newVariant: Variant = {
+            ...initialState.variants[0],
+            sku: `SKU-${Date.now()}-${state.variants.length}`,
+            attributes: [
+              { key: config.attr1, value: "" },
+              { key: config.attr2, value: "" },
             ],
           };
 
-        case "REMOVE_VARIANT":
+          return {
+            ...state,
+            variants: [...state.variants, newVariant],
+          };
+        }
+
+        case "REMOVE_VARIANT": {
           if (state.variants.length <= 1) return state;
           const removedSku = state.variants[action.index].sku;
           return {
             ...state,
             variants: state.variants.filter((_, i) => i !== action.index),
-            // Clean up stock units associated with the removed variant
             stockUnits: state.stockUnits.filter(
               (u) => u.variantId !== removedSku,
             ),
           };
+        }
 
         default:
           return state;
