@@ -6,6 +6,8 @@ export interface VariantAttrConfig {
 }
 
 export interface CategoryMapping {
+  attr1: any;
+  attr2: any;
   attributes: VariantAttrConfig[];
 }
 
@@ -21,6 +23,8 @@ export const CATEGORY_VARIANT_CONFIG: Record<string, CategoryMapping> = {
         options: ["128GB", "256GB", "512GB", "1TB"],
       },
     ],
+    attr1: undefined,
+    attr2: undefined,
   },
   laptop: {
     attributes: [
@@ -37,6 +41,8 @@ export const CATEGORY_VARIANT_CONFIG: Record<string, CategoryMapping> = {
         options: ["256GB SSD", "512GB SSD", "1TB SSD", "2TB SSD", "4TB SSD"],
       },
     ],
+    attr1: undefined,
+    attr2: undefined,
   },
   tablet: {
     attributes: [
@@ -49,5 +55,7 @@ export const CATEGORY_VARIANT_CONFIG: Record<string, CategoryMapping> = {
         options: ["64GB", "128GB", "256GB", "512GB", "1TB", "2TB"],
       },
     ],
+    attr1: undefined,
+    attr2: undefined,
   },
 };

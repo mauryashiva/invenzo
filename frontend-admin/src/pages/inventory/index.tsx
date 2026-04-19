@@ -10,9 +10,6 @@ import type { Variant, SpecEntry, StockUnit } from "@/types/inventory";
 export default function InventoryPage() {
   const { state, dispatch } = useProductForm();
 
-  // 💡 Note: Local 'activeCategory' state removed to ensure
-  // global 'state.category' controls the "Morphing" logic.
-
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-in fade-in duration-500">
       {/* 🚀 Top Header: Actions */}
@@ -75,7 +72,7 @@ export default function InventoryPage() {
                 <button
                   key={cat}
                   onClick={() => {
-                    // 🔄 This triggers the key migration (RAM -> Processor) in the reducer
+                    // 🔄 Triggers the key migration in the reducer
                     dispatch({ type: "SET_CATEGORY", payload: cat });
                   }}
                   className={`flex-1 py-1.5 px-4 text-xs font-bold rounded-lg capitalize transition-all ${
@@ -100,7 +97,7 @@ export default function InventoryPage() {
         }
       />
 
-      {/* ⚙️ Section 3: Technical Specs (Now morphs correctly) */}
+      {/* ⚙️ Section 3: Technical Specs */}
       <DynamicSpecs
         category={state.category}
         specs={state.specs}
@@ -139,8 +136,9 @@ export default function InventoryPage() {
         ))}
       </div>
 
-      {/* 📦 Section 5: Stock Units */}
+      {/* 📦 Section 5: Stock Units (Serial & IMEI Management) */}
       <StockManager
+        category={state.category} // 🔄 FIXED: Passed dynamic category instead of hardcoded string
         variants={state.variants}
         units={state.stockUnits || []}
         onUpdateUnits={(units: StockUnit[]) =>
@@ -155,7 +153,7 @@ export default function InventoryPage() {
         }
       />
 
-      {/* 📊 Section 6: Profit Dashboard */}
+      {/* 📊 Section 6: Profit Health Dashboard */}
       <ProfitDashboard
         purchasePrice={state.variants[0]?.baseCost || 0}
         sellingPrice={state.variants[0]?.sellingPrice || 0}
