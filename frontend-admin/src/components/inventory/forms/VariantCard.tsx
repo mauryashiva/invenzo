@@ -1,19 +1,20 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { Trash2, Plus, Fingerprint } from "lucide-react";
+import { Trash2, Fingerprint } from "lucide-react";
 import { COLOR_MAP, getColorNameByHex } from "@/common/colors";
-import { useCalculations } from "@/hooks/inventory/useCalculations";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { CATEGORY_VARIANT_CONFIG } from "@/common/configs/variant-mapping";
 import { HybridDropdown } from "@/components/ui/HybridDropdown";
-import { generateSKU } from "@/lib/sku"; // 🔄 Import the new utility
+import { generateSKU } from "@/lib/sku";
+import { VariantFinance } from "./VariantFinance"; // 🔄 New Import
+import { VariantMedia } from "./VariantMedia"; // 🔄 New Import
 import type { Variant, CategoryType } from "@/types/inventory";
 
 interface VariantCardProps {
   variant: Variant;
   index: number;
   category: CategoryType;
-  brandName: string; // 🆕 Added to drive SKU logic
-  modelNumber: string; // 🆕 Added to drive SKU logic
+  brandName: string;
+  modelNumber: string;
   onUpdate: (data: Partial<Variant>) => void;
   onRemove: () => void;
   purchaseGst: number;
@@ -35,13 +36,6 @@ export const VariantCard = ({
   const [openAttrIndex, setOpenAttrIndex] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const finance = useCalculations(
-    variant.baseCost,
-    variant.sellingPrice,
-    purchaseGst,
-    salesGst,
-  );
-
   useClickOutside(dropdownRef, () => {
     setIsColorOpen(false);
     setOpenAttrIndex(null);
@@ -55,8 +49,7 @@ export const VariantCard = ({
     );
   }, [category]);
 
-  // 🤖 REAL-TIME SKU GENERATION EFFECT
-  // This fires whenever Brand, Model, Color, or Attributes change
+  // Real-time SKU effect
   useEffect(() => {
     const newSku = generateSKU(
       brandName,
@@ -79,7 +72,6 @@ export const VariantCard = ({
   const updateAttribute = (attrIndex: number, value: string) => {
     const newAttributes = [...(variant.attributes || [])];
     const defaultKey = config.attributes[attrIndex]?.key || "Attribute";
-
     newAttributes[attrIndex] = {
       key: variant.attributes?.[attrIndex]?.key || defaultKey,
       value,
@@ -89,12 +81,10 @@ export const VariantCard = ({
 
   const labelStyle =
     "text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block tracking-wider";
-  const inputStyle =
-    "w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500 transition-all font-medium";
 
   return (
     <div className="bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-6 shadow-sm animate-in fade-in duration-300">
-      {/* Header: Identity & Status */}
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
         <div className="flex items-center gap-3">
           <div
@@ -133,8 +123,8 @@ export const VariantCard = ({
         </button>
       </div>
 
+      {/* Attributes Selection */}
       <div className="grid grid-cols-12 gap-4" ref={dropdownRef}>
-        {/* Color Column */}
         <div className="col-span-1">
           <label className={labelStyle}>Hex</label>
           <input
@@ -150,7 +140,6 @@ export const VariantCard = ({
           />
         </div>
 
-        {/* Color Dropdown using HybridDropdown */}
         <HybridDropdown
           label="Color Finish"
           value={variant.colorName || ""}
@@ -168,137 +157,33 @@ export const VariantCard = ({
           placeholder="Select Color"
         />
 
-        {/* Dynamic Attributes using HybridDropdown */}
-        {config.attributes.map((attrConfig, idx) => {
-          // Logic for column spanning based on attribute key
-          let colSpan = "col-span-3";
-          if (attrConfig.key.toLowerCase().includes("processor"))
-            colSpan = "col-span-3";
-          if (attrConfig.key.toLowerCase().includes("ssd"))
-            colSpan = "col-span-3";
-          if (attrConfig.key.toLowerCase().includes("ram"))
-            colSpan = "col-span-3";
-
-          return (
-            <HybridDropdown
-              key={idx}
-              label={attrConfig.key}
-              value={variant.attributes?.[idx]?.value || ""}
-              options={attrConfig.options}
-              isOpen={openAttrIndex === idx}
-              onToggle={() =>
-                setOpenAttrIndex(openAttrIndex === idx ? null : idx)
-              }
-              onChange={(val) => updateAttribute(idx, val)}
-              className={colSpan}
-              placeholder={`Select ${attrConfig.key}`}
-            />
-          );
-        })}
+        {config.attributes.map((attrConfig, idx) => (
+          <HybridDropdown
+            key={idx}
+            label={attrConfig.key}
+            value={variant.attributes?.[idx]?.value || ""}
+            options={attrConfig.options}
+            isOpen={openAttrIndex === idx}
+            onToggle={() =>
+              setOpenAttrIndex(openAttrIndex === idx ? null : idx)
+            }
+            onChange={(val) => updateAttribute(idx, val)}
+            className="col-span-3"
+            placeholder={`Select ${attrConfig.key}`}
+          />
+        ))}
       </div>
 
-      {/* Row 2: Pricing & Stock */}
-      <div className="grid grid-cols-4 gap-4">
-        <div>
-          <label className={labelStyle}>Cost (Excl GST) ₹</label>
-          <input
-            type="number"
-            className={`${inputStyle} font-mono`}
-            value={variant.baseCost}
-            onChange={(e) => onUpdate({ baseCost: Number(e.target.value) })}
-          />
-        </div>
-        <div>
-          <label className={labelStyle}>Sale (Excl GST) ₹</label>
-          <input
-            type="number"
-            className={`${inputStyle} font-mono font-bold text-indigo-500 dark:text-indigo-400`}
-            value={variant.sellingPrice}
-            onChange={(e) => onUpdate({ sellingPrice: Number(e.target.value) })}
-          />
-        </div>
-        <div>
-          <label className={labelStyle}>Current Stock</label>
-          <input
-            type="number"
-            className={inputStyle}
-            value={variant.stock}
-            onChange={(e) => onUpdate({ stock: Number(e.target.value) })}
-          />
-        </div>
-        <div>
-          <label className={labelStyle}>Reorder Level</label>
-          <input
-            type="number"
-            className={inputStyle}
-            value={variant.reorderLevel || 5}
-            onChange={(e) => onUpdate({ reorderLevel: Number(e.target.value) })}
-          />
-        </div>
-      </div>
+      {/* 💰 Section: Finance (Extracted) */}
+      <VariantFinance
+        variant={variant}
+        purchaseGst={purchaseGst}
+        salesGst={salesGst}
+        onUpdate={onUpdate}
+      />
 
-      {/* Financial Breakdown Table */}
-      <div className="bg-slate-50 dark:bg-black/40 rounded-xl p-5 border border-slate-200 dark:border-slate-800 space-y-3">
-        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">
-          GST PRICE BREAKDOWN ({salesGst}%)
-        </h3>
-        <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
-          <span>Purchase Price (Cost + GST)</span>
-          <span className="font-mono text-slate-800 dark:text-slate-200 font-bold">
-            ₹{finance.purchaseTotal.toLocaleString()}
-          </span>
-        </div>
-        <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
-          <span>Selling Price Excl GST</span>
-          <span className="font-mono text-slate-800 dark:text-slate-200">
-            ₹{variant.sellingPrice.toLocaleString()}
-          </span>
-        </div>
-        <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400 pb-2">
-          <span>GST on Selling Price</span>
-          <span className="font-mono text-slate-800 dark:text-slate-200">
-            ₹{finance.sellingTaxAmount.toLocaleString()}
-          </span>
-        </div>
-
-        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center font-bold">
-          <span className="text-slate-800 dark:text-slate-300 italic text-sm">
-            Customer Pays (Incl GST)
-          </span>
-          <span className="text-slate-950 dark:text-white text-xl font-black tracking-tighter">
-            ₹{finance.sellingTotal.toLocaleString()}
-          </span>
-        </div>
-
-        <div className="flex justify-between items-center pt-2">
-          <span className="text-slate-500 dark:text-slate-500 uppercase font-bold text-[9px] tracking-widest">
-            MARGIN ON COST
-          </span>
-          <span
-            className={`text-xs font-black ${finance.marginPercentage > 0 ? "text-emerald-500" : "text-rose-500"}`}
-          >
-            {finance.marginPercentage.toFixed(1)}%
-          </span>
-        </div>
-      </div>
-
-      {/* Media Uploaders */}
-      <div className="flex gap-4">
-        <button
-          type="button"
-          className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 hover:border-indigo-500 hover:text-indigo-500 transition-all bg-white dark:bg-transparent"
-        >
-          <Plus size={20} />
-          <span className="text-[9px] font-bold mt-1 uppercase">Image</span>
-        </button>
-        <button
-          type="button"
-          className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 hover:border-indigo-500 hover:text-indigo-500 transition-all bg-white dark:bg-transparent"
-        >
-          <Plus size={20} />
-          <span className="text-[9px] font-bold mt-1 uppercase">Video</span>
-        </button>
-      </div>
+      {/* 🖼️ Section: Media (Extracted) */}
+      <VariantMedia />
     </div>
   );
 };
