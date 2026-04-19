@@ -72,7 +72,6 @@ export default function InventoryPage() {
                 <button
                   key={cat}
                   onClick={() => {
-                    // 🔄 Triggers the key migration in the reducer
                     dispatch({ type: "SET_CATEGORY", payload: cat });
                   }}
                   className={`flex-1 py-1.5 px-4 text-xs font-bold rounded-lg capitalize transition-all ${
@@ -122,7 +121,7 @@ export default function InventoryPage() {
 
         {state.variants.map((v: Variant, idx: number) => (
           <VariantCard
-            key={`${state.category}-${idx}`} // Force fresh render when category changes
+            key={`${state.category}-${idx}`}
             index={idx}
             variant={v}
             category={state.category}
@@ -132,13 +131,16 @@ export default function InventoryPage() {
               dispatch({ type: "UPDATE_VARIANT", index: idx, data })
             }
             onRemove={() => dispatch({ type: "REMOVE_VARIANT", index: idx })}
+            // 🔄 REAL-TIME SKU PROPS:
+            brandName={state.brandId} // Links to "Brand ID" in ProductInfo
+            modelNumber={state.name} // Links to "Product Name" or "Model Number"
           />
         ))}
       </div>
 
-      {/* 📦 Section 5: Stock Units (Serial & IMEI Management) */}
+      {/* 📦 Section 5: Stock Units */}
       <StockManager
-        category={state.category} // 🔄 FIXED: Passed dynamic category instead of hardcoded string
+        category={state.category}
         variants={state.variants}
         units={state.stockUnits || []}
         onUpdateUnits={(units: StockUnit[]) =>

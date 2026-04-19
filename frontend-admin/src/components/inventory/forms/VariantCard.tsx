@@ -1,17 +1,19 @@
-// src/components/inventory/forms/VariantCard.tsx
-import { useState, useRef, useMemo } from "react";
-import { Trash2, Plus } from "lucide-react";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { Trash2, Plus, Fingerprint } from "lucide-react";
 import { COLOR_MAP, getColorNameByHex } from "@/common/colors";
 import { useCalculations } from "@/hooks/inventory/useCalculations";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { CATEGORY_VARIANT_CONFIG } from "@/common/configs/variant-mapping";
 import { HybridDropdown } from "@/components/ui/HybridDropdown";
+import { generateSKU } from "@/lib/sku"; // 🔄 Import the new utility
 import type { Variant, CategoryType } from "@/types/inventory";
 
 interface VariantCardProps {
   variant: Variant;
   index: number;
   category: CategoryType;
+  brandName: string; // 🆕 Added to drive SKU logic
+  modelNumber: string; // 🆕 Added to drive SKU logic
   onUpdate: (data: Partial<Variant>) => void;
   onRemove: () => void;
   purchaseGst: number;
@@ -22,6 +24,8 @@ export const VariantCard = ({
   variant,
   index,
   category,
+  brandName,
+  modelNumber,
   onUpdate,
   onRemove,
   purchaseGst,
@@ -51,6 +55,27 @@ export const VariantCard = ({
     );
   }, [category]);
 
+  // 🤖 REAL-TIME SKU GENERATION EFFECT
+  // This fires whenever Brand, Model, Color, or Attributes change
+  useEffect(() => {
+    const newSku = generateSKU(
+      brandName,
+      modelNumber,
+      variant.colorName,
+      variant.attributes,
+    );
+    if (newSku !== variant.sku) {
+      onUpdate({ sku: newSku });
+    }
+  }, [
+    brandName,
+    modelNumber,
+    variant.colorName,
+    variant.attributes,
+    variant.sku,
+    onUpdate,
+  ]);
+
   const updateAttribute = (attrIndex: number, value: string) => {
     const newAttributes = [...(variant.attributes || [])];
     const defaultKey = config.attributes[attrIndex]?.key || "Attribute";
@@ -73,18 +98,26 @@ export const VariantCard = ({
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
         <div className="flex items-center gap-3">
           <div
-            className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 shadow-sm"
+            className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 shadow-sm transition-colors duration-500"
             style={{ backgroundColor: variant.color }}
           />
-          <span className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1 rounded text-xs font-bold uppercase tracking-tight">
-            Variant {index + 1}: {variant.colorName || "Unnamed"} ·{" "}
-            {variant.attributes
-              ?.map((a) => a.value)
-              .filter(Boolean)
-              .join(" · ") || "No Specs"}
-          </span>
+          <div className="flex flex-col">
+            <span className="text-slate-800 dark:text-slate-200 text-xs font-bold uppercase tracking-tight">
+              Variant {index + 1}: {variant.colorName || "Unnamed"} ·{" "}
+              {variant.attributes
+                ?.map((a) => a.value)
+                .filter(Boolean)
+                .join(" · ") || "No Specs"}
+            </span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <Fingerprint size={10} className="text-indigo-500" />
+              <span className="text-[10px] font-mono font-black text-indigo-500 tracking-tighter uppercase">
+                SKU: {variant.sku || "GENERATING..."}
+              </span>
+            </div>
+          </div>
           <span
-            className={`px-2 py-0.5 rounded text-[10px] font-black border ${variant.stock < (variant.reorderLevel || 5) ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"}`}
+            className={`ml-2 px-2 py-0.5 rounded text-[10px] font-black border ${variant.stock < (variant.reorderLevel || 5) ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"}`}
           >
             {variant.stock < (variant.reorderLevel || 5)
               ? "LOW STOCK"
@@ -126,36 +159,42 @@ export const VariantCard = ({
           onToggle={() => setIsColorOpen(!isColorOpen)}
           onChange={(val) => {
             onUpdate({ colorName: val });
-            // Sync hex if a known color name is selected
             const foundHex = Object.keys(COLOR_MAP).find(
               (key) => COLOR_MAP[key] === val,
             );
             if (foundHex) onUpdate({ color: foundHex, colorName: val });
           }}
-          className="col-span-3"
+          className="col-span-2"
           placeholder="Select Color"
         />
 
         {/* Dynamic Attributes using HybridDropdown */}
-        {config.attributes.map((attrConfig, idx) => (
-          <HybridDropdown
-            key={idx}
-            label={attrConfig.key}
-            value={variant.attributes?.[idx]?.value || ""}
-            options={attrConfig.options}
-            isOpen={openAttrIndex === idx}
-            onToggle={() =>
-              setOpenAttrIndex(openAttrIndex === idx ? null : idx)
-            }
-            onChange={(val) => updateAttribute(idx, val)}
-            className={
-              attrConfig.key.toLowerCase().includes("processor")
-                ? "col-span-5"
-                : "col-span-3"
-            }
-            placeholder={`Select ${attrConfig.key}`}
-          />
-        ))}
+        {config.attributes.map((attrConfig, idx) => {
+          // Logic for column spanning based on attribute key
+          let colSpan = "col-span-3";
+          if (attrConfig.key.toLowerCase().includes("processor"))
+            colSpan = "col-span-3";
+          if (attrConfig.key.toLowerCase().includes("ssd"))
+            colSpan = "col-span-3";
+          if (attrConfig.key.toLowerCase().includes("ram"))
+            colSpan = "col-span-3";
+
+          return (
+            <HybridDropdown
+              key={idx}
+              label={attrConfig.key}
+              value={variant.attributes?.[idx]?.value || ""}
+              options={attrConfig.options}
+              isOpen={openAttrIndex === idx}
+              onToggle={() =>
+                setOpenAttrIndex(openAttrIndex === idx ? null : idx)
+              }
+              onChange={(val) => updateAttribute(idx, val)}
+              className={colSpan}
+              placeholder={`Select ${attrConfig.key}`}
+            />
+          );
+        })}
       </div>
 
       {/* Row 2: Pricing & Stock */}
