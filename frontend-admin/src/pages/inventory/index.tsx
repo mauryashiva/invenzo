@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useProductForm } from "@/hooks/inventory/useProductForm";
 import { ProductInfo } from "@/components/inventory/forms/ProductInfo";
 import { DynamicSpecs } from "@/components/inventory/forms/DynamicSpecs";
@@ -5,10 +6,18 @@ import { VariantCard } from "@/components/inventory/forms/VariantCard";
 import { ProfitDashboard } from "@/components/inventory/forms/ProfitDashboard";
 import { StockManager } from "@/components/inventory/forms/StockManager";
 import { PackagePlus, Save, LayoutGrid } from "lucide-react";
+import {
+  FASHION_SUB_CATEGORIES,
+  type GenderType,
+} from "@/common/fashion/sub-categories";
+import { DEPARTMENT_VIEWS } from "@/common/configs/department-config"; // 🚀 Imported dynamic config
 import type { Variant, SpecEntry, StockUnit } from "@/types/inventory";
 
 export default function InventoryPage() {
   const { state, dispatch } = useProductForm();
+
+  // Local state for Fashion Gender filtering
+  const [activeGender, setActiveGender] = useState<GenderType>("women");
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-in fade-in duration-500">
@@ -67,31 +76,86 @@ export default function InventoryPage() {
             <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">
               Sub-category View
             </label>
-            <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-full">
-              {(["smartphone", "laptop", "tablet"] as const).map((cat) => (
+
+            {/* --- DYNAMIC UI: ELECTRONICS (Now using Config) --- */}
+            {state.categoryId === "electronics" && (
+              <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-full">
+                {DEPARTMENT_VIEWS.electronics.subCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() =>
+                      dispatch({
+                        type: "SET_CATEGORY",
+                        payload: cat.toLowerCase(),
+                      })
+                    }
+                    className={`flex-1 py-1.5 px-4 text-xs font-bold rounded-lg capitalize transition-all ${
+                      state.category === cat.toLowerCase()
+                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* --- DYNAMIC UI: FASHION (Now using Config genders) --- */}
+            {state.categoryId === "fashion" && (
+              <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-full">
+                {DEPARTMENT_VIEWS.fashion.genders.map((gender) => (
+                  <button
+                    key={gender}
+                    onClick={() => setActiveGender(gender as GenderType)}
+                    className={`flex-1 py-1.5 px-4 text-xs font-bold rounded-lg capitalize transition-all ${
+                      activeGender === gender
+                        ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    }`}
+                  >
+                    {gender}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* --- DYNAMIC SUB-CATEGORY GRID (Only for Fashion) --- */}
+        {state.categoryId === "fashion" && (
+          <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-3">
+              Sub-categories for {activeGender}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {FASHION_SUB_CATEGORIES[activeGender].map((sub) => (
                 <button
-                  key={cat}
-                  onClick={() => {
-                    dispatch({ type: "SET_CATEGORY", payload: cat });
-                  }}
-                  className={`flex-1 py-1.5 px-4 text-xs font-bold rounded-lg capitalize transition-all ${
-                    state.category === cat
-                      ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                      : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  key={sub}
+                  onClick={() =>
+                    dispatch({
+                      type: "SET_CATEGORY",
+                      payload: sub.toLowerCase(),
+                    })
+                  }
+                  className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all ${
+                    state.category === sub.toLowerCase()
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/20"
+                      : "bg-transparent border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-indigo-500"
                   }`}
                 >
-                  {cat}
+                  {sub}
                 </button>
               ))}
             </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* 🏷️ Section 2: Product Identity */}
       <ProductInfo
         data={state}
-        onUpdate={(data) =>
+        onUpdate={(data: any) =>
           dispatch({ type: "UPDATE_BASE_INFO", payload: data })
         }
       />
@@ -131,9 +195,8 @@ export default function InventoryPage() {
               dispatch({ type: "UPDATE_VARIANT", index: idx, data })
             }
             onRemove={() => dispatch({ type: "REMOVE_VARIANT", index: idx })}
-            // 🔄 REAL-TIME SKU PROPS:
-            brandName={state.brandId} // Links to "Brand ID" in ProductInfo
-            modelNumber={state.name} // Links to "Product Name" or "Model Number"
+            brandName={state.brandId}
+            modelNumber={state.name}
           />
         ))}
       </div>

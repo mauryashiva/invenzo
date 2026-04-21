@@ -15,3 +15,13 @@ export const formatTitleCase = (str: string): string => {
 export const formatModelCode = (str: string): string => {
   return str.toUpperCase().trim();
 };
+
+// src/lib/utils.ts
+
+export const capitalizeWords = (str: string): string => {
+  return str.toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase());
+};
+
+export const forceUpper = (str: string): string => {
+  return str.toUpperCase().trim();
+};

@@ -3,7 +3,12 @@ export interface SpecEntry {
   value: string;
 }
 
-export type CategoryType = "smartphone" | "laptop" | "tablet";
+export type CategoryType =
+  | "smartphone"
+  | "laptop"
+  | "tablet"
+  | "fashion"
+  | string;
 
 export interface VariantAttribute {
   key: string; // e.g., "RAM", "Processor", "Size"

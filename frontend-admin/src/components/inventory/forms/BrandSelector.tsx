@@ -1,109 +1,121 @@
 import { useState, useRef } from "react";
-import { Plus, Check, ChevronDown } from "lucide-react";
+import { ChevronDown, Plus, Check } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { formatTitleCase } from "@/lib/utils"; // Using centralized utils
+import { formatTitleCase } from "@/lib/utils";
+import { BRANDS_BY_DEPT } from "@/common/configs/brand-options"; // 🚀 Import from your new common file
 
-export const BrandSelector = () => {
+interface BrandSelectorProps {
+  value: string;
+  onChange: (val: string) => void;
+  department: string;
+}
+
+export const BrandSelector = ({
+  value,
+  onChange,
+  department,
+}: BrandSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
-  const [brands, setBrands] = useState(["Samsung", "Apple", "Sony", "Google"]);
   const [newBrand, setNewBrand] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
-  useClickOutside(dropdownRef, () => setIsOpen(false));
+  // Get brands for the specific department or default to an empty array
+  const brands = BRANDS_BY_DEPT[department] || [];
 
-  const handleAddBrand = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent closing dropdown
-    if (newBrand.trim()) {
-      const formatted = formatTitleCase(newBrand.trim());
-      if (!brands.includes(formatted)) {
-        setBrands((prev) => [formatted, ...prev]);
-        setSelectedBrand(formatted);
-      }
-      setNewBrand("");
-    }
+  const filteredBrands = brands.filter((b) =>
+    b.toLowerCase().includes(newBrand.toLowerCase()),
+  );
+
+  // Logic to show "Add New" button only if the brand doesn't exist
+  const brandExists = brands.some(
+    (b) => b.toLowerCase() === newBrand.toLowerCase(),
+  );
+
+  useClickOutside(dropdownRef, () => {
+    setIsOpen(false);
+    setNewBrand("");
+  });
+
+  const handleInputChange = (val: string) => {
+    setNewBrand(formatTitleCase(val));
   };
 
-  const handleSelect = (brand: string) => {
-    setSelectedBrand(brand);
-    setIsOpen(false);
+  const handleAddBrand = () => {
+    if (newBrand.trim()) {
+      onChange(newBrand.trim());
+      setNewBrand("");
+      setIsOpen(false);
+    }
   };
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 tracking-widest">
-        Brand
-      </label>
-
-      {/* Trigger Button */}
+      {/* Trigger */}
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="mt-1 p-2.5 border rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 cursor-pointer flex justify-between items-center hover:border-indigo-500 transition-all shadow-sm"
+        className="w-full p-2.5 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex justify-between items-center cursor-pointer transition-all hover:border-slate-400 dark:hover:border-slate-600 shadow-sm"
       >
         <span
-          className={
-            selectedBrand ? "text-sm font-medium" : "text-sm text-slate-400"
-          }
+          className={`text-sm ${value ? "text-slate-800 dark:text-slate-200 font-medium" : "text-slate-500"}`}
         >
-          {selectedBrand || "Select a brand"}
+          {value || "Select a brand"}
         </span>
         <ChevronDown
           size={16}
-          className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          className={`text-slate-500 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
         />
       </div>
 
-      {/* Dropdown Menu */}
+      {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          {/* Add New Brand Input Section */}
-          <div className="p-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-            <div className="flex gap-2">
-              <input
-                value={newBrand}
-                onChange={(e) => setNewBrand(formatTitleCase(e.target.value))}
-                placeholder="New Brand Name..."
-                className="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs p-2 rounded-lg outline-none focus:ring-1 ring-indigo-500 text-slate-800 dark:text-slate-200"
-                onKeyDown={(e) => e.key === "Enter" && handleAddBrand(e as any)}
-              />
+        <div className="absolute top-full left-0 w-full mt-2 z-100 bg-white dark:bg-[#1a1c23] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-3 animate-in zoom-in-95 duration-200">
+          <div className="flex gap-2 mb-3">
+            <input
+              autoFocus
+              value={newBrand}
+              onChange={(e) => handleInputChange(e.target.value)}
+              placeholder="Search or add brand..."
+              className="flex-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500 transition-all"
+            />
+            {!brandExists && newBrand.length > 0 && (
               <button
+                type="button"
                 onClick={handleAddBrand}
-                disabled={!newBrand.trim()}
-                className="p-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg transition-colors shadow-md"
+                className="bg-indigo-600 text-white p-2 rounded-lg hover:bg-indigo-700 transition-all active:scale-90"
               >
                 <Plus size={16} />
               </button>
-            </div>
+            )}
           </div>
 
-          {/* Brands List */}
-          <div className="max-h-60 overflow-y-auto p-1.5 custom-scrollbar">
-            {brands.map((b) => (
-              <div
-                key={b}
-                onClick={() => handleSelect(b)}
-                className={`flex items-center justify-between p-2.5 text-sm rounded-xl cursor-pointer transition-colors
-                  ${
-                    selectedBrand === b
-                      ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400"
-                      : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  }
-                `}
-              >
-                <span>{b}</span>
-                {selectedBrand === b && (
-                  <Check
-                    size={14}
-                    className="animate-in zoom-in duration-300"
-                  />
-                )}
-              </div>
-            ))}
-
-            {brands.length === 0 && (
-              <div className="p-4 text-center text-xs text-slate-500 uppercase tracking-tighter">
-                No brands found
+          <div className="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+            {filteredBrands.length > 0 ? (
+              filteredBrands.map((brand) => (
+                <div
+                  key={brand}
+                  onClick={() => {
+                    onChange(brand);
+                    setIsOpen(false);
+                  }}
+                  className="flex justify-between items-center px-3 py-2.5 hover:bg-indigo-600/10 dark:hover:bg-indigo-600/20 rounded-lg cursor-pointer text-sm text-slate-700 dark:text-slate-300 group"
+                >
+                  <span
+                    className={
+                      value === brand
+                        ? "text-indigo-500 font-bold"
+                        : "group-hover:text-indigo-500"
+                    }
+                  >
+                    {brand}
+                  </span>
+                  {value === brand && (
+                    <Check size={14} className="text-indigo-500" />
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="py-4 text-center text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+                No brands listed
               </div>
             )}
           </div>
