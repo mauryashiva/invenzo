@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProductForm } from "@/hooks/inventory/useProductForm";
 import { ProductInfo } from "@/components/inventory/forms/ProductInfo";
 import { DynamicSpecs } from "@/components/inventory/forms/DynamicSpecs";
@@ -33,6 +33,23 @@ export default function InventoryPage() {
     (state.gender as GenderType) || "women",
   );
 
+  /**
+   * 🔄 AUTO-SYNC LOGIC
+   * Ensures that when switching to Fashion, the global state
+   * is immediately aware of the default local selections.
+   */
+  useEffect(() => {
+    if (state.categoryId === "fashion") {
+      dispatch({
+        type: "UPDATE_BASE_INFO",
+        payload: {
+          fashionType: activeType,
+          gender: activeGender,
+        } as any,
+      });
+    }
+  }, [state.categoryId]);
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-in fade-in duration-500">
       {/* 🚀 Header */}
@@ -55,7 +72,7 @@ export default function InventoryPage() {
       </div>
 
       {/* 📂 Section 1: Department & 3-Tier Category Architecture */}
-      <section className="p-8 bg-white dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-4xl shadow-sm space-y-8">
+      <section className="p-8 bg-white dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] shadow-sm space-y-8">
         <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
           <LayoutGrid size={12} /> Classification Logic
         </h2>

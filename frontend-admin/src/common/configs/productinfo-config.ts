@@ -1,7 +1,8 @@
+import { OCCASION_OPTIONS, SEASON_OPTIONS } from "../fashion/occasionoption";
+
 export interface FieldConfig {
   name: string;
   label: string;
-  // 🆕 Added 'hybrid-select' for fields like Occasion where users can add custom values
   type:
     | "text"
     | "select"
@@ -14,12 +15,9 @@ export interface FieldConfig {
 }
 
 export const PRODUCT_INFO_SCHEMA: Record<string, FieldConfig[]> = {
+  // ================= ELECTRONICS =================
   electronics: [
-    {
-      name: "brandId",
-      label: "Brand",
-      type: "brand-select",
-    },
+    { name: "brandId", label: "Brand", type: "brand-select" },
     {
       name: "name",
       label: "Product Name",
@@ -42,50 +40,178 @@ export const PRODUCT_INFO_SCHEMA: Record<string, FieldConfig[]> = {
       name: "features",
       label: "Key Features (One per line)",
       type: "textarea",
-      placeholder: "200MP Camera\n6000mAh battery\nSnapdragon 8 Elite",
+      placeholder: "200MP Camera\nSnapdragon 8 Elite",
     },
   ],
-  fashion: [
-    {
-      name: "brandId",
-      label: "Brand",
-      type: "brand-select",
-    },
+
+  // ================= 👗 FASHION: APPAREL =================
+  fashion_apparel: [
+    { name: "brandId", label: "Brand", type: "brand-select" },
     {
       name: "name",
       label: "Product Name",
       type: "text",
-      placeholder: "e.g. Floral Wrap Midi Dress",
+      placeholder: "e.g. Slim Fit Denim",
     },
     {
       name: "styleCode",
-      label: "SKU / Style Code",
+      label: "Style Code",
       type: "text",
-      placeholder: "e.g. WD-FL-001",
-    },
-    {
-      name: "occasion",
-      label: "Occasion",
-      type: "hybrid-select", // 🔄 Changed to hybrid-select for custom additions
-      options: ["Casual", "Formal", "Party", "Ethnic", "Sportswear", "Wedding"],
-    },
-    {
-      name: "season",
-      label: "Season",
-      type: "select",
-      options: ["Summer", "Winter", "Spring/Autumn", "All Season"],
+      placeholder: "e.g. DNM-001",
     },
     {
       name: "fabric",
       label: "Fabric / Material",
       type: "text",
-      placeholder: "e.g. 100% Cotton, Polyester blend",
+      placeholder: "e.g. 100% Cotton, Linen, Denim",
+    },
+    {
+      name: "occasion",
+      label: "Occasion",
+      type: "hybrid-select",
+      options: OCCASION_OPTIONS.filter((opt) =>
+        [
+          "Casual",
+          "Formal",
+          "Workwear",
+          "Party",
+          "Ethnic",
+          "Wedding",
+          "Festive",
+          "Lounge",
+          "Nightwear",
+        ].includes(opt),
+      ),
+    },
+    {
+      name: "season",
+      label: "Season",
+      type: "select",
+      options: SEASON_OPTIONS,
     },
     {
       name: "features",
-      label: "Product Description",
+      label: "Description",
       type: "textarea",
-      placeholder: "Short description shown on product page...",
+      placeholder: "Product details, fit information, and style tips...",
     },
   ],
+
+  // ================= 👟 FASHION: FOOTWEAR =================
+  fashion_footwear: [
+    { name: "brandId", label: "Brand", type: "brand-select" },
+    {
+      name: "name",
+      label: "Product Name",
+      type: "text",
+      placeholder: "e.g. Air Max Sneakers",
+    },
+    {
+      name: "styleCode",
+      label: "Style Code",
+      type: "text",
+      placeholder: "e.g. NK-SNE-99",
+    },
+    {
+      name: "upperMaterial",
+      label: "Upper Material",
+      type: "text",
+      placeholder: "e.g. Synthetic Leather / Mesh / Suede",
+    },
+    {
+      name: "soleMaterial",
+      label: "Sole Material",
+      type: "text",
+      placeholder: "e.g. Rubber / EVA / TPU",
+    },
+    {
+      name: "occasion",
+      label: "Occasion",
+      type: "hybrid-select",
+      options: OCCASION_OPTIONS.filter((opt) =>
+        [
+          "Sports",
+          "Running",
+          "Training",
+          "Trekking",
+          "Casual",
+          "Formal",
+          "Outdoor",
+        ].includes(opt),
+      ),
+    },
+    {
+      name: "features",
+      label: "Description",
+      type: "textarea",
+      placeholder: "Comfort, cushioning, and grip technology details...",
+    },
+  ],
+
+  // ================= 👜 FASHION: ACCESSORIES =================
+  fashion_accessories: [
+    { name: "brandId", label: "Brand", type: "brand-select" },
+    {
+      name: "name",
+      label: "Product Name",
+      type: "text",
+      placeholder: "e.g. Aviator Sunglasses",
+    },
+    {
+      name: "styleCode",
+      label: "Style Code",
+      type: "text",
+      placeholder: "e.g. ACC-SUN-01",
+    },
+    {
+      name: "material",
+      label: "Material",
+      type: "text",
+      placeholder: "e.g. Stainless Steel / Acetate / Leather",
+    },
+    {
+      name: "occasion",
+      label: "Occasion",
+      type: "hybrid-select",
+      options: OCCASION_OPTIONS.filter((opt) =>
+        [
+          "Daily Wear",
+          "Travel",
+          "Party",
+          "Beachwear",
+          "Special Occasion",
+          "Formal",
+        ].includes(opt),
+      ),
+    },
+    {
+      name: "features",
+      label: "Description",
+      type: "textarea",
+      placeholder: "Dimensions, weight, and lens/hardware specifications...",
+    },
+  ],
+};
+
+/**
+ * 💡 Helper to get the correct schema based on department and fashion type.
+ */
+export const getSchemaByContext = (
+  categoryId: string,
+  fashionType?: string,
+): FieldConfig[] => {
+  if (categoryId === "electronics") {
+    return PRODUCT_INFO_SCHEMA.electronics;
+  }
+
+  if (categoryId === "fashion") {
+    // Standardize key to lowercase to match schema keys
+    const type = (fashionType || "apparel").toLowerCase();
+    const typeKey = `fashion_${type}`;
+
+    return PRODUCT_INFO_SCHEMA[typeKey] || PRODUCT_INFO_SCHEMA.fashion_apparel;
+  }
+
+  // Default fallback
+  return PRODUCT_INFO_SCHEMA.electronics;
 };
