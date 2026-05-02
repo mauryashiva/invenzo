@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { Trash2, Fingerprint, Box } from "lucide-react";
-import { COLOR_MAP, getColorNameByHex } from "@/common/colors";
+import { getColorNameByHex, getColorMapByDepartment } from "@/common/colors";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { getVariantConfig } from "@/common/configs/variant-mapping"; // 🚀 Using the new helper
 import { HybridDropdown } from "@/components/ui/HybridDropdown";
@@ -13,8 +13,9 @@ interface VariantCardProps {
   variant: Variant;
   index: number;
   category: CategoryType;
-  fashionType?: string; // 👗 Added for fashion context
-  selectedSizes?: string[]; // 📏 Added to populate Size dropdown
+  categoryId?: string;       // 🏷️ "electronics" | "fashion" — drives color list
+  fashionType?: string;      // 👗 For fashion variant attribute context
+  selectedSizes?: string[];  // 📏 Populates Size dropdown
   brandName: string;
   modelNumber: string;
   onUpdate: (data: Partial<Variant>) => void;
@@ -27,6 +28,7 @@ export const VariantCard = ({
   variant,
   index,
   category,
+  categoryId,
   fashionType,
   selectedSizes = [],
   brandName,
@@ -36,6 +38,8 @@ export const VariantCard = ({
   purchaseGst,
   salesGst,
 }: VariantCardProps) => {
+  // 🎨 Department-specific color palette
+  const activeColorMap = getColorMapByDepartment(categoryId);
   const [isColorOpen, setIsColorOpen] = useState(false);
   const [openAttrIndex, setOpenAttrIndex] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -150,13 +154,13 @@ export const VariantCard = ({
         <HybridDropdown
           label="Color Finish"
           value={variant.colorName || ""}
-          options={Object.values(COLOR_MAP)}
+          options={Object.values(activeColorMap)}
           isOpen={isColorOpen}
           onToggle={() => setIsColorOpen(!isColorOpen)}
           onChange={(val) => {
             onUpdate({ colorName: val });
-            const foundHex = Object.keys(COLOR_MAP).find(
-              (key) => COLOR_MAP[key] === val,
+            const foundHex = Object.keys(activeColorMap).find(
+              (key) => activeColorMap[key] === val,
             );
             if (foundHex) onUpdate({ color: foundHex, colorName: val });
           }}

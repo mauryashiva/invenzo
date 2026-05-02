@@ -274,6 +274,7 @@ export default function InventoryPage() {
             index={idx}
             variant={v}
             category={state.category}
+            categoryId={state.categoryId}             // 🎨 Drives color list
             fashionType={state.fashionType} // 🚀 Passed for context
             selectedSizes={state.selectedSizes} // 🚀 Passed for Size dropdown
             purchaseGst={state.purchaseGst}
