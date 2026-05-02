@@ -87,7 +87,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
                 {/* Tooltip for collapsed state */}
                 {!isOpen && (
-                  <div className="absolute left-14 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all bg-slate-900 text-white text-xs py-1 px-2 rounded md:block hidden whitespace-nowrap z-[60]">
+                  <div className="absolute left-14 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all bg-slate-900 text-white text-xs py-1 px-2 rounded md:block hidden whitespace-nowrap z-60">
                     {item.name}
                   </div>
                 )}

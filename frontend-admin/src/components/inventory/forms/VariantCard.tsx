@@ -1,18 +1,20 @@
 import { useState, useRef, useMemo, useEffect } from "react";
-import { Trash2, Fingerprint } from "lucide-react";
+import { Trash2, Fingerprint, Box } from "lucide-react";
 import { COLOR_MAP, getColorNameByHex } from "@/common/colors";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { CATEGORY_VARIANT_CONFIG } from "@/common/configs/variant-mapping";
+import { getVariantConfig } from "@/common/configs/variant-mapping"; // 🚀 Using the new helper
 import { HybridDropdown } from "@/components/ui/HybridDropdown";
 import { generateSKU } from "@/lib/sku";
-import { VariantFinance } from "./VariantFinance"; // 🔄 New Import
-import { VariantMedia } from "./VariantMedia"; // 🔄 New Import
+import { VariantFinance } from "./VariantFinance";
+import { VariantMedia } from "./VariantMedia";
 import type { Variant, CategoryType } from "@/types/inventory";
 
 interface VariantCardProps {
   variant: Variant;
   index: number;
   category: CategoryType;
+  fashionType?: string; // 👗 Added for fashion context
+  selectedSizes?: string[]; // 📏 Added to populate Size dropdown
   brandName: string;
   modelNumber: string;
   onUpdate: (data: Partial<Variant>) => void;
@@ -25,6 +27,8 @@ export const VariantCard = ({
   variant,
   index,
   category,
+  fashionType,
+  selectedSizes = [],
   brandName,
   modelNumber,
   onUpdate,
@@ -41,13 +45,13 @@ export const VariantCard = ({
     setOpenAttrIndex(null);
   });
 
+  /**
+   * 🎯 DYNAMIC CONFIGURATION
+   * Uses the helper to find the right attributes (RAM/Storage vs Size/Fit)
+   */
   const config = useMemo(() => {
-    const activeCat = (category?.toLowerCase() ||
-      "smartphone") as keyof typeof CATEGORY_VARIANT_CONFIG;
-    return (
-      CATEGORY_VARIANT_CONFIG[activeCat] || CATEGORY_VARIANT_CONFIG.smartphone
-    );
-  }, [category]);
+    return getVariantConfig(category, fashionType);
+  }, [category, fashionType]);
 
   // Real-time SKU effect
   useEffect(() => {
@@ -72,6 +76,7 @@ export const VariantCard = ({
   const updateAttribute = (attrIndex: number, value: string) => {
     const newAttributes = [...(variant.attributes || [])];
     const defaultKey = config.attributes[attrIndex]?.key || "Attribute";
+    
     newAttributes[attrIndex] = {
       key: variant.attributes?.[attrIndex]?.key || defaultKey,
       value,
@@ -83,12 +88,12 @@ export const VariantCard = ({
     "text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block tracking-wider";
 
   return (
-    <div className="bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-6 shadow-sm animate-in fade-in duration-300">
+    <div className="bg-white dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-6 shadow-sm animate-in fade-in duration-300">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
         <div className="flex items-center gap-3">
           <div
-            className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 shadow-sm transition-colors duration-500"
+            className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 shadow-sm transition-transform duration-500 hover:scale-110"
             style={{ backgroundColor: variant.color }}
           />
           <div className="flex flex-col">
@@ -97,7 +102,7 @@ export const VariantCard = ({
               {variant.attributes
                 ?.map((a) => a.value)
                 .filter(Boolean)
-                .join(" · ") || "No Specs"}
+                .join(" · ") || "Pending Specs"}
             </span>
             <div className="flex items-center gap-1.5 mt-0.5">
               <Fingerprint size={10} className="text-indigo-500" />
@@ -107,17 +112,19 @@ export const VariantCard = ({
             </div>
           </div>
           <span
-            className={`ml-2 px-2 py-0.5 rounded text-[10px] font-black border ${variant.stock < (variant.reorderLevel || 5) ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"}`}
+            className={`ml-2 px-2 py-0.5 rounded text-[10px] font-black border flex items-center gap-1 ${
+              variant.stock < (variant.reorderLevel || 5) 
+                ? "bg-rose-500/10 text-rose-500 border-rose-500/20" 
+                : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+            }`}
           >
-            {variant.stock < (variant.reorderLevel || 5)
-              ? "LOW STOCK"
-              : "IN STOCK"}{" "}
-            ({variant.stock})
+            <Box size={10} />
+            {variant.stock < (variant.reorderLevel || 5) ? "LOW STOCK" : "IN STOCK"} ({variant.stock})
           </span>
         </div>
         <button
           onClick={onRemove}
-          className="text-rose-500 text-xs font-bold flex items-center gap-1 border border-rose-500/20 px-3 py-1 rounded-lg hover:bg-rose-500/10 transition-all"
+          className="text-rose-500 text-xs font-bold flex items-center gap-1 border border-rose-500/20 px-3 py-1 rounded-lg hover:bg-rose-500/10 transition-all active:scale-95"
         >
           <Trash2 size={14} /> Remove
         </button>
@@ -157,24 +164,30 @@ export const VariantCard = ({
           placeholder="Select Color"
         />
 
-        {config.attributes.map((attrConfig, idx) => (
-          <HybridDropdown
-            key={idx}
-            label={attrConfig.key}
-            value={variant.attributes?.[idx]?.value || ""}
-            options={attrConfig.options}
-            isOpen={openAttrIndex === idx}
-            onToggle={() =>
-              setOpenAttrIndex(openAttrIndex === idx ? null : idx)
-            }
-            onChange={(val) => updateAttribute(idx, val)}
-            className="col-span-3"
-            placeholder={`Select ${attrConfig.key}`}
-          />
-        ))}
+        {/* 🚀 DYNAMIC ATTRIBUTES (RAM/Storage OR Size/Fit) */}
+        {config.attributes.map((attrConfig, idx) => {
+          // If the attribute is 'Size' in a fashion context, use the selectedSizes from the Size System
+          const options = attrConfig.isDynamic ? selectedSizes : attrConfig.options;
+
+          return (
+            <HybridDropdown
+              key={idx}
+              label={attrConfig.key}
+              value={variant.attributes?.[idx]?.value || ""}
+              options={options}
+              isOpen={openAttrIndex === idx}
+              onToggle={() =>
+                setOpenAttrIndex(openAttrIndex === idx ? null : idx)
+              }
+              onChange={(val) => updateAttribute(idx, val)}
+              className="col-span-3"
+              placeholder={`Select ${attrConfig.key}`}
+            />
+          );
+        })}
       </div>
 
-      {/* 💰 Section: Finance (Extracted) */}
+      {/* 💰 Section: Finance */}
       <VariantFinance
         variant={variant}
         purchaseGst={purchaseGst}
@@ -182,7 +195,7 @@ export const VariantCard = ({
         onUpdate={onUpdate}
       />
 
-      {/* 🖼️ Section: Media (Extracted) */}
+      {/* 🖼️ Section: Media */}
       <VariantMedia />
     </div>
   );

@@ -8,7 +8,7 @@
     "skipLibCheck": true,
 
     /* ✅ Fix deprecation warning */
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
 
     /* ✅ Alias setup */
     "baseUrl": ".",

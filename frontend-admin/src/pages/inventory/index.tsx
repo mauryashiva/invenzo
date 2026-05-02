@@ -20,7 +20,7 @@ import {
   type FashionType,
 } from "@/common/fashion/sub-categories";
 import { DEPARTMENT_VIEWS } from "@/common/configs/department-config";
-import type { SpecEntry } from "@/types/inventory";
+import type { SpecEntry, Variant, StockUnit } from "@/types/inventory";
 
 export default function InventoryPage() {
   const { state, dispatch } = useProductForm();
@@ -48,7 +48,7 @@ export default function InventoryPage() {
         } as any,
       });
     }
-  }, [state.categoryId]);
+  }, [state.categoryId, activeType, activeGender]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-in fade-in duration-500">
@@ -142,13 +142,7 @@ export default function InventoryPage() {
                     return (
                       <button
                         key={type}
-                        onClick={() => {
-                          setActiveType(type as FashionType);
-                          dispatch({
-                            type: "UPDATE_BASE_INFO",
-                            payload: { fashionType: type } as any,
-                          });
-                        }}
+                        onClick={() => setActiveType(type as FashionType)}
                         className={`flex-1 py-2 px-4 text-[11px] font-black rounded-xl capitalize transition-all flex items-center justify-center gap-2 ${
                           activeType === type
                             ? "bg-white dark:bg-slate-700 text-indigo-500 shadow-md"
@@ -180,13 +174,7 @@ export default function InventoryPage() {
                 {DEPARTMENT_VIEWS.fashion.genders.map((gender) => (
                   <button
                     key={gender}
-                    onClick={() => {
-                      setActiveGender(gender as GenderType);
-                      dispatch({
-                        type: "UPDATE_BASE_INFO",
-                        payload: { gender: gender } as any,
-                      });
-                    }}
+                    onClick={() => setActiveGender(gender as GenderType)}
                     className={`px-8 py-2 text-[11px] font-black rounded-xl capitalize transition-all ${
                       activeGender === gender
                         ? "bg-white dark:bg-slate-700 text-indigo-500 shadow-md"
@@ -237,7 +225,7 @@ export default function InventoryPage() {
         }
       />
 
-      {/* ⚙️ Section 3: Dynamic Slot */}
+      {/* ⚙️ Section 3: Dynamic Slot (Size System or Tech Specs) */}
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-700">
         {state.categoryId === "electronics" ? (
           <DynamicSpecs
@@ -280,15 +268,17 @@ export default function InventoryPage() {
           </button>
         </div>
 
-        {state.variants.map((v, idx) => (
+        {state.variants.map((v: Variant, idx: number) => (
           <VariantCard
             key={`${state.category}-${idx}`}
             index={idx}
             variant={v}
             category={state.category}
+            fashionType={state.fashionType} // 🚀 Passed for context
+            selectedSizes={state.selectedSizes} // 🚀 Passed for Size dropdown
             purchaseGst={state.purchaseGst}
             salesGst={state.salesGst}
-            onUpdate={(data) =>
+            onUpdate={(data: Partial<Variant>) =>
               dispatch({ type: "UPDATE_VARIANT", index: idx, data })
             }
             onRemove={() => dispatch({ type: "REMOVE_VARIANT", index: idx })}
@@ -303,10 +293,10 @@ export default function InventoryPage() {
         category={state.category}
         variants={state.variants}
         units={state.stockUnits || []}
-        onUpdateUnits={(units) =>
+        onUpdateUnits={(units: StockUnit[]) =>
           dispatch({ type: "UPDATE_BASE_INFO", payload: { stockUnits: units } })
         }
-        onUpdateVariantStock={(variantIdx, count) =>
+        onUpdateVariantStock={(variantIdx: number, count: number) =>
           dispatch({
             type: "UPDATE_VARIANT",
             index: variantIdx,

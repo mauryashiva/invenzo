@@ -1,5 +1,5 @@
 import { useReducer } from "react";
-import { CATEGORY_VARIANT_CONFIG } from "@/common/configs/variant-mapping";
+import { getVariantConfig } from "@/common/configs/variant-mapping";
 import type {
   InventoryProduct,
   CategoryType,
@@ -63,11 +63,10 @@ export function useProductForm() {
         case "SET_CATEGORY": {
           const newCategory = action.payload;
 
-          // 🎯 Determine the correct config for the new category
-          // If fashion item, it pulls from the updated mapping we built
-          const config =
-            CATEGORY_VARIANT_CONFIG[newCategory] ||
-            CATEGORY_VARIANT_CONFIG.smartphone;
+          // 🎯 Determine the correct config for the new category.
+          // Uses getVariantConfig so fashion sub-categories correctly
+          // fall back to apparel/footwear/accessories defaults instead of smartphone.
+          const config = getVariantConfig(newCategory, state.fashionType);
 
           // 🔄 MIGRATION LOGIC:
           // Dynamically map existing variant attributes to the new category's keys.
@@ -107,9 +106,9 @@ export function useProductForm() {
         }
 
         case "ADD_VARIANT": {
-          const config =
-            CATEGORY_VARIANT_CONFIG[state.category] ||
-            CATEGORY_VARIANT_CONFIG.smartphone;
+          // Uses getVariantConfig so new variants for fashion categories
+          // get the correct Size/Fit attributes instead of RAM/Storage.
+          const config = getVariantConfig(state.category, state.fashionType);
 
           // Create new attributes based on current category config
           const newAttributes = config.attributes.map((attr) => ({
