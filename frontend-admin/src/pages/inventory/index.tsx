@@ -292,6 +292,8 @@ export default function InventoryPage() {
       {/* 📦 Section 5: Stock Units */}
       <StockManager
         category={state.category}
+        categoryId={state.categoryId}       // 🎯 Drives field labels
+        fashionType={state.fashionType}     // 👗 Apparel / footwear / accessories
         variants={state.variants}
         units={state.stockUnits || []}
         onUpdateUnits={(units: StockUnit[]) =>

@@ -9,13 +9,15 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import {
-  STOCK_CONFIG,
+  getStockConfig,
   getVariantDisplayName,
 } from "@/common/configs/stock-config";
 import type { Variant, StockUnit, CategoryType } from "@/types/inventory";
 
 interface StockManagerProps {
   category: CategoryType;
+  categoryId?: string;   // "electronics" | "fashion" — drives field labels
+  fashionType?: string;  // "apparel" | "footwear" | "accessories"
   variants: Variant[];
   units: StockUnit[];
   onUpdateUnits: (units: StockUnit[]) => void;
@@ -24,6 +26,8 @@ interface StockManagerProps {
 
 export const StockManager = ({
   category,
+  categoryId,
+  fashionType,
   variants,
   units,
   onUpdateUnits,
@@ -35,7 +39,8 @@ export const StockManager = ({
   const [bulkIMEIs, setBulkIMEIs] = useState("");
 
   const activeVariant = variants[selectedVarIdx];
-  const config = STOCK_CONFIG[category] || STOCK_CONFIG.smartphone;
+  // 🎯 Use smart resolver — same fallback chain as getVariantConfig
+  const config = getStockConfig(category, categoryId, fashionType);
 
   const currentVariantUnits = useMemo(() => {
     return units.filter((u) => u.variantId === activeVariant?.sku);
@@ -118,7 +123,7 @@ export const StockManager = ({
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight">
             Stock units — {config.primaryIdentifier}{" "}
-            {config.hasImei && `& ${config.secondaryIdentifier}`}
+            {config.hasSecondaryId && `& ${config.secondaryIdentifier}`}
           </h2>
           <div
             className={`px-2 py-1 rounded-md flex items-center gap-1.5 border ${isLowStock ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"}`}
@@ -188,7 +193,7 @@ export const StockManager = ({
                 placeholder={`Paste ${config.primaryIdentifier}s here...`}
               />
             </div>
-            {config.hasImei && (
+            {config.hasSecondaryId && (
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                   {config.secondaryIdentifier}s (Same order)
@@ -219,9 +224,9 @@ export const StockManager = ({
                 <th className="py-4 pl-4 w-12">#</th>
                 <th className="py-4 px-3">Variant Specs</th>
                 <th className="py-4 px-3">{config.primaryIdentifier}</th>
-                {config.hasImei && (
+                {config.hasSecondaryId && (
                   <th className="py-4 px-3">
-                    {config.secondaryIdentifier} 1 / 2
+                    {config.secondaryIdentifier}{config.hasImei ? " 1 / 2" : ""}
                   </th>
                 )}
                 <th className="py-4 px-3">Condition</th>
@@ -250,29 +255,28 @@ export const StockManager = ({
                       placeholder={`Enter ${config.primaryIdentifier}`}
                     />
                   </td>
-                  {config.hasImei && (
+                  {config.hasSecondaryId && (
                     <td className="py-4 px-6">
-                      {" "}
-                      {/* Added padding for space between columns */}
                       <div className="flex gap-3">
-                        {" "}
-                        {/* Increased gap between IMEI 1 and 2 */}
                         <input
-                          className="w-32 bg-slate-100 dark:bg-slate-800 px-3 py-2.5 rounded-lg outline-none border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-1 focus:ring-indigo-500 transition-all"
-                          placeholder="IMEI 1"
+                          className="w-36 bg-slate-100 dark:bg-slate-800 px-3 py-2.5 rounded-lg outline-none border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-1 focus:ring-indigo-500 transition-all"
+                          placeholder={config.secondaryIdentifier}
                           value={unit.imei1}
                           onChange={(e) =>
                             updateUnitField(unit.id, "imei1", e.target.value)
                           }
                         />
-                        <input
-                          className="w-32 bg-slate-100 dark:bg-slate-800 px-3 py-2.5 rounded-lg outline-none border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-1 focus:ring-indigo-500 transition-all"
-                          placeholder="IMEI 2"
-                          value={unit.imei2 || ""}
-                          onChange={(e) =>
-                            updateUnitField(unit.id, "imei2", e.target.value)
-                          }
-                        />
+                        {/* IMEI devices only: show a second IMEI input */}
+                        {config.hasImei && (
+                          <input
+                            className="w-36 bg-slate-100 dark:bg-slate-800 px-3 py-2.5 rounded-lg outline-none border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-1 focus:ring-indigo-500 transition-all"
+                            placeholder="IMEI 2"
+                            value={unit.imei2 || ""}
+                            onChange={(e) =>
+                              updateUnitField(unit.id, "imei2", e.target.value)
+                            }
+                          />
+                        )}
                       </div>
                     </td>
                   )}
