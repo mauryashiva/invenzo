@@ -1,10 +1,22 @@
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/providers/AuthProvider";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
+// Layouts
 import Layout from "@/pages/layout";
-// Import your real Inventory Page
+import { AuthLayout } from "@/layouts/AuthLayout";
+
+// Auth Pages
+import LoginPage from "@/pages/auth/login";
+import ForgotPasswordPage from "@/pages/auth/forgot-password";
+import ResetPasswordPage from "@/pages/auth/reset-password";
+import AcceptInvitePage from "@/pages/auth/accept-invite";
+
+// App Pages
 import InventoryPage from "@/pages/inventory/index";
 
-// Simple placeholder for Dashboard (we can build this later)
+// Simple placeholder for Dashboard
 const Dashboard = () => (
   <div className="text-sm font-medium text-slate-800 dark:text-slate-200">
     Dashboard Overview Content
@@ -13,21 +25,29 @@ const Dashboard = () => (
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          {/* Redirect root to dashboard */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* ── PUBLIC AUTH ROUTES ── */}
+          <Route element={<AuthLayout />}>
+            <Route path="/auth/login" element={<LoginPage />} />
+            <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/auth/accept-invite" element={<AcceptInvitePage />} />
+          </Route>
 
-          <Route path="/dashboard" element={<Dashboard />} />
-
-          {/* USE THE REAL COMPONENT HERE */}
-          <Route path="/inventory" element={<InventoryPage />} />
-
-          {/* Catch-all redirect */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+          {/* ── PROTECTED ADMIN ROUTES ── */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/inventory" element={<InventoryPage />} />
+              {/* Catch-all redirect to dashboard for authenticated users */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

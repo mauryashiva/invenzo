@@ -1,0 +1,51 @@
+# Environment variables
+.env
+
+# Binary files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# Build folders
+/bin/
+/dist/
+/build/
+
+# Coverage files
+coverage.out
+coverage.html
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Air live reload
+.air/
+
+# Vendor (optional)
+vendor/
+
+# Generated binaries
+main
+
+# Docker overrides
+docker-compose.override.yml

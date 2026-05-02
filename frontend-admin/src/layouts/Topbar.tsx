@@ -1,7 +1,8 @@
 // src/layouts/Topbar.tsx
-import { Menu, Bell, Settings, Search, Sun, Moon, Monitor } from "lucide-react";
+import { Menu, Bell, Settings, Search, Sun, Moon, Monitor, LogOut } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { useInventorySocket } from "@/hooks/socket/useInventorySocket";
+import { useAuth } from "@/providers/AuthProvider";
 
 interface TopbarProps {
   onMenuClick: () => void;
@@ -12,6 +13,7 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
 
   // Connect to our centralized socket hook for real-time status
   const { isConnected } = useInventorySocket();
+  const { admin, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 md:px-6 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md transition-colors duration-300">
@@ -105,6 +107,28 @@ export const Topbar = ({ onMenuClick }: TopbarProps) => {
             />
           </button>
         </div>
+
+        {/* Auth User info & Logout */}
+        {admin && (
+          <>
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden md:block" />
+            <div className="hidden md:flex flex-col items-end mr-2">
+              <span className="text-sm font-medium text-slate-900 dark:text-white">
+                {admin.name}
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 capitalize">
+                {admin.role.replace("_", " ")}
+              </span>
+            </div>
+            <button
+              onClick={logout}
+              className="flex items-center gap-2 p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-colors"
+              title="Log out"
+            >
+              <LogOut size={18} />
+            </button>
+          </>
+        )}
       </div>
     </header>
   );
