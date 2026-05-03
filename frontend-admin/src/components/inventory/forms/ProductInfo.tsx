@@ -218,7 +218,7 @@ export const ProductInfo = ({ data, onUpdate }: ProductInfoProps) => {
               </div>
             ) : (
               <input
-                type={field.type}
+                type={field.readOnly ? "text" : field.type}
                 className={`${inputStyle} ${
                   field.readOnly 
                     ? "bg-slate-50 dark:bg-slate-800/20 text-slate-500 cursor-not-allowed border-dashed border-slate-200 dark:border-slate-800" 
