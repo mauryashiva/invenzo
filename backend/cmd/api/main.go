@@ -14,6 +14,7 @@ import (
 	adminAuth      "github.com/mauryashiva/invenzo-backend/internal/modules/admin/auth"
 	adminInventory "github.com/mauryashiva/invenzo-backend/internal/modules/admin/inventory"
 	adminProduct   "github.com/mauryashiva/invenzo-backend/internal/modules/admin/product"
+	adminTax       "github.com/mauryashiva/invenzo-backend/internal/modules/admin/tax"
 )
 
 func main() {
@@ -53,6 +54,7 @@ func main() {
 	admin := api.Group("/admin", middleware.AdminAuth)
 	adminProduct.Register(admin)
 	adminInventory.Register(admin)
+	adminTax.Register(admin)
 	// Add more admin modules here as you build them:
 	// adminOrders.Register(admin)
 	// adminDashboard.Register(admin)

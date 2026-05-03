@@ -1,5 +1,6 @@
-import { useReducer } from "react";
+import { useReducer, useEffect } from "react";
 import { getVariantConfig } from "@/common/configs/variant-mapping";
+import { taxApi } from "@/lib/api/tax.api";
 import type {
   InventoryProduct,
   CategoryType,
@@ -13,7 +14,8 @@ type Action =
   | { type: "SET_SPECS"; payload: SpecEntry[] }
   | { type: "ADD_VARIANT" }
   | { type: "REMOVE_VARIANT"; index: number }
-  | { type: "UPDATE_VARIANT"; index: number; data: Partial<Variant> };
+  | { type: "UPDATE_VARIANT"; index: number; data: Partial<Variant> }
+  | { type: "SET_TAX"; payload: { salesGst: number; hsn: string } };
 
 const initialState: InventoryProduct = {
   brandId: "",
@@ -22,6 +24,7 @@ const initialState: InventoryProduct = {
   categoryId: "electronics", // Primary Department
   category: "smartphone", // Sub-category
   warranty: 12,
+  hsn: "",
   purchaseGst: 18,
   salesGst: 18,
   features: [],
@@ -140,12 +143,55 @@ export function useProductForm() {
           };
         }
 
+        case "SET_TAX":
+          return {
+            ...state,
+            salesGst: action.payload.salesGst,
+            hsn: action.payload.hsn || state.hsn,
+          };
+
         default:
           return state;
       }
     },
     initialState,
   );
+
+  // 🛡️ DYNAMIC TAXATION EFFECT
+  // Automatically updates SalesGST and HSN when hierarchy or price changes.
+  useEffect(() => {
+    const fetchTax = async () => {
+      try {
+        const res = await taxApi.calculate({
+          department: state.categoryId,
+          type: state.fashionType,
+          category: state.category,
+          sub_category: state.gender,
+          selling_price: state.variants[0]?.sellingPrice || 0,
+        });
+
+        if (res.success && res.data) {
+          dispatch({
+            type: "SET_TAX",
+            payload: {
+              salesGst: res.data.sales_gst,
+              hsn: res.data.hsn,
+            },
+          });
+        }
+      } catch (error) {
+        console.error("Tax calculation failed", error);
+      }
+    };
+
+    fetchTax();
+  }, [
+    state.categoryId,
+    state.fashionType,
+    state.category,
+    state.gender,
+    state.variants[0]?.sellingPrice,
+  ]);
 
   return { state, dispatch };
 }

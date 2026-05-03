@@ -12,7 +12,29 @@ export interface FieldConfig {
     | "brand-select";
   placeholder?: string;
   options?: string[];
+  readOnly?: boolean;
 }
+
+const FINANCE_FIELDS: FieldConfig[] = [
+  {
+    name: "purchaseGst",
+    label: "Purchase GST (%)",
+    type: "number",
+    placeholder: "18",
+  },
+  {
+    name: "salesGst",
+    label: "Sales GST (%)",
+    type: "number",
+    readOnly: true,
+  },
+  {
+    name: "hsn",
+    label: "HSN Code",
+    type: "text",
+    readOnly: true,
+  },
+];
 
 export const PRODUCT_INFO_SCHEMA: Record<string, FieldConfig[]> = {
   // ================= ELECTRONICS =================
@@ -36,6 +58,7 @@ export const PRODUCT_INFO_SCHEMA: Record<string, FieldConfig[]> = {
       type: "number",
       placeholder: "12",
     },
+    ...FINANCE_FIELDS,
     {
       name: "features",
       label: "Key Features (One per line)",
@@ -80,6 +103,7 @@ export const PRODUCT_INFO_SCHEMA: Record<string, FieldConfig[]> = {
           "Festive",
           "Lounge",
           "Nightwear",
+          "Innerwear",
         ].includes(opt),
       ),
     },
@@ -89,6 +113,7 @@ export const PRODUCT_INFO_SCHEMA: Record<string, FieldConfig[]> = {
       type: "select",
       options: SEASON_OPTIONS,
     },
+    ...FINANCE_FIELDS,
     {
       name: "features",
       label: "Description",
@@ -140,6 +165,7 @@ export const PRODUCT_INFO_SCHEMA: Record<string, FieldConfig[]> = {
         ].includes(opt),
       ),
     },
+    ...FINANCE_FIELDS,
     {
       name: "features",
       label: "Description",
@@ -184,6 +210,7 @@ export const PRODUCT_INFO_SCHEMA: Record<string, FieldConfig[]> = {
         ].includes(opt),
       ),
     },
+    ...FINANCE_FIELDS,
     {
       name: "features",
       label: "Description",

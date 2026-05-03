@@ -62,6 +62,7 @@ export interface InventoryProduct {
   category: CategoryType; // This stores the final sub-category (e.g., "Jeans")
 
   warranty: number;
+  hsn: string;
   purchaseGst: number;
   salesGst: number;
 

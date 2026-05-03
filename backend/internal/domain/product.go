@@ -44,6 +44,7 @@ type Product struct {
 	Category    string `gorm:"not null" json:"category"`     // Sub-category e.g. "smartphone", "jeans"
 
 	// Finance
+	HSN         string  `json:"hsn"`
 	PurchaseGST float64 `gorm:"default:18" json:"purchase_gst"`
 	SalesGST    float64 `gorm:"default:18" json:"sales_gst"`
 	Warranty    int     `gorm:"default:12" json:"warranty"` // Months

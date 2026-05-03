@@ -3,18 +3,41 @@ package product
 
 import (
 	"github.com/mauryashiva/invenzo-backend/internal/domain"
+	"github.com/mauryashiva/invenzo-backend/internal/modules/admin/tax"
 	"github.com/mauryashiva/invenzo-backend/pkg/utils"
 )
 
 type Service struct {
-	repo *Repository
+	repo       *Repository
+	taxService *tax.Service
 }
 
 func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+	return &Service{
+		repo:       repo,
+		taxService: tax.NewService(),
+	}
 }
 
 func (s *Service) Create(req CreateProductRequest) (*domain.Product, error) {
+	// 1. Resolve Tax Label and base GST/HSN
+	// We'll use the first variant's price for product-level GST resolution if it's threshold-based
+	representativePrice := 0.0
+	if len(req.Variants) > 0 {
+		representativePrice = req.Variants[0].SellingPrice
+	}
+
+	taxReq := tax.TaxRequest{
+		Department:   req.CategoryID,
+		Type:         req.FashionType,
+		Category:     req.Category,
+		SubCategory:  req.Gender,
+		SellingPrice: representativePrice,
+	}
+
+	autoSalesGST := s.taxService.CalculateSalesGST(taxReq)
+	autoHSN := s.taxService.GenerateHSN(taxReq)
+
 	product := &domain.Product{
 		BrandID:          req.BrandID,
 		Name:             req.Name,
@@ -24,8 +47,9 @@ func (s *Service) Create(req CreateProductRequest) (*domain.Product, error) {
 		FashionType:      req.FashionType,
 		Gender:           req.Gender,
 		Category:         req.Category,
-		PurchaseGST:      req.PurchaseGST,
-		SalesGST:         req.SalesGST,
+		HSN:              autoHSN,
+		PurchaseGST:      req.PurchaseGST, // Admin-editable
+		SalesGST:         autoSalesGST,    // System-generated
 		Warranty:         req.Warranty,
 		Occasion:         req.Occasion,
 		Season:           req.Season,
@@ -38,8 +62,8 @@ func (s *Service) Create(req CreateProductRequest) (*domain.Product, error) {
 	}
 
 	// Map specs
-	for _, s := range req.Specs {
-		product.Specs = append(product.Specs, domain.SpecEntry{Key: s.Key, Value: s.Value})
+	for _, spec := range req.Specs {
+		product.Specs = append(product.Specs, domain.SpecEntry{Key: spec.Key, Value: spec.Value})
 	}
 
 	// Map variants — auto-generate SKU if not provided

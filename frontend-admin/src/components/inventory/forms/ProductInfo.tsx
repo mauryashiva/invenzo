@@ -209,10 +209,11 @@ export const ProductInfo = ({ data, onUpdate }: ProductInfoProps) => {
             ) : (
               <input
                 type={field.type}
-                className={inputStyle}
+                className={`${inputStyle} ${field.readOnly ? "bg-slate-200/50 dark:bg-slate-800/30 text-slate-400 cursor-not-allowed border-dashed border-slate-300 dark:border-slate-700" : ""}`}
                 placeholder={field.placeholder}
                 value={(data as any)[field.name] || ""}
-                onChange={(e) => handleInputChange(field.name, e.target.value)}
+                onChange={(e) => !field.readOnly && handleInputChange(field.name, e.target.value)}
+                readOnly={field.readOnly}
               />
             )}
           </div>

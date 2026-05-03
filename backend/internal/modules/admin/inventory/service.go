@@ -6,14 +6,19 @@ import (
 	"time"
 
 	"github.com/mauryashiva/invenzo-backend/internal/domain"
+	"github.com/mauryashiva/invenzo-backend/internal/modules/admin/tax"
 )
 
 type Service struct {
-	repo *Repository
+	repo       *Repository
+	taxService *tax.Service
 }
 
 func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+	return &Service{
+		repo:       repo,
+		taxService: tax.NewService(),
+	}
 }
 
 func (s *Service) AddUnit(req AddStockUnitRequest) (*domain.StockUnit, error) {
