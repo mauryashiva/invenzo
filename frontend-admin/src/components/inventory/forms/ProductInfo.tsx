@@ -42,7 +42,13 @@ export const ProductInfo = ({ data, onUpdate }: ProductInfoProps) => {
       formattedValue = formatModelCode(value);
     }
 
-    onUpdate({ [name]: formattedValue } as Partial<InventoryProduct>);
+    // 🏷️ Handle percentage strings from selects (e.g., "18%" -> 18)
+    let finalValue: string | number = formattedValue;
+    if (["purchaseGst", "salesGst"].includes(name) && typeof formattedValue === "string") {
+      finalValue = Number(formattedValue.replace("%", "")) || 0;
+    }
+
+    onUpdate({ [name]: finalValue } as Partial<InventoryProduct>);
   };
 
   /**
@@ -185,7 +191,11 @@ export const ProductInfo = ({ data, onUpdate }: ProductInfoProps) => {
               <div className="relative">
                 <select
                   className={`${inputStyle} cursor-pointer appearance-none pr-10`}
-                  value={(data as any)[field.name] || ""}
+                  value={
+                    ["purchaseGst", "salesGst"].includes(field.name)
+                      ? `${(data as any)[field.name]}%`
+                      : (data as any)[field.name] || ""
+                  }
                   onChange={(e) =>
                     handleInputChange(field.name, e.target.value)
                   }

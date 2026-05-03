@@ -23,6 +23,8 @@ const initialState: InventoryProduct = {
   modelNumber: "",
   categoryId: "electronics", // Primary Department
   category: "smartphone", // Sub-category
+  fashionType: "apparel",
+  gender: "women",
   warranty: 12,
   hsn: "",
   purchaseGst: 18,

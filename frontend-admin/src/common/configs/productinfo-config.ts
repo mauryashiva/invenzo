@@ -19,8 +19,8 @@ const FINANCE_FIELDS: FieldConfig[] = [
   {
     name: "purchaseGst",
     label: "Purchase GST (%)",
-    type: "number",
-    placeholder: "18",
+    type: "select",
+    options: ["0%", "5%", "12%", "18%", "28%", "40%"],
   },
   {
     name: "salesGst",

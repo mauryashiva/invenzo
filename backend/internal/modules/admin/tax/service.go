@@ -2,6 +2,8 @@
 package tax
 
 import (
+	"strings"
+
 	"github.com/mauryashiva/invenzo-backend/pkg/utils"
 )
 
@@ -22,9 +24,13 @@ type TaxRequest struct {
 
 // ResolveTaxLabel maps the hierarchy to a TaxLabel
 func (s *Service) ResolveTaxLabel(req TaxRequest) TaxLabel {
-	switch req.Department {
+	dept := strings.ToLower(strings.TrimSpace(req.Department))
+	prodType := strings.ToLower(strings.TrimSpace(req.Type))
+	category := strings.ToLower(strings.TrimSpace(req.Category))
+
+	switch dept {
 	case "fashion":
-		switch req.Type {
+		switch prodType {
 		case "apparel":
 			return LabelFashionApparel
 		case "footwear":
@@ -33,6 +39,12 @@ func (s *Service) ResolveTaxLabel(req TaxRequest) TaxLabel {
 			return LabelFashionAccessories
 		}
 	case "electronics":
+		switch category {
+		case "smartphone":
+			return LabelElectronicsPhones
+		case "laptop", "tablet":
+			return LabelElectronicsLaptops
+		}
 		return LabelElectronics
 	case "automotive":
 		return LabelAutomotive

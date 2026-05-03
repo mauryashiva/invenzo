@@ -1,4 +1,3 @@
-// pkg/utils/hsn.go
 package utils
 
 import (
@@ -6,33 +5,56 @@ import (
 	"strings"
 )
 
-// HSNRegistry maps hierarchy to base HSN codes
+/**
+ * 🛠️ HSN REGISTRY (Industry Standard)
+ * 8517: Smartphones / Communication devices
+ * 8471: Laptops / Tablets / Data processing units
+ * 6109: Apparel (Knitted)
+ * 6403: Footwear
+ */
 var HSNRegistry = map[string]string{
+	// Electronics Specifics
+	"electronics:smartphone": "8517",
+	"electronics:laptop":     "8471",
+	"electronics:tablet":     "8471",
+	"electronics:default":    "8500",
+
+	// Fashion Specifics
 	"fashion:apparel":     "6109",
 	"fashion:footwear":    "6403",
 	"fashion:accessories": "4202",
-	"electronics:default": "8517",
-	"automotive:default":  "8708",
+
+	// Fallbacks
+	"automotive:default": "8708",
 }
 
-// GenerateHSN generates a dynamic HSN code
+// GenerateHSN generates a professional HSN code
 func GenerateHSN(department, prodType, category string) string {
-	key := fmt.Sprintf("%s:%s", strings.ToLower(department), strings.ToLower(prodType))
+	department = strings.ToLower(strings.TrimSpace(department))
+	prodType = strings.ToLower(strings.TrimSpace(prodType))
+	category = strings.ToLower(strings.TrimSpace(category))
+
+	// 🎯 1. Try Category specific (e.g., electronics:smartphone)
+	key := fmt.Sprintf("%s:%s", department, category)
 	base, ok := HSNRegistry[key]
+
+	// 🎯 2. Try Type specific (e.g., fashion:apparel)
 	if !ok {
-		// Try department default
-		key = fmt.Sprintf("%s:default", strings.ToLower(department))
+		key = fmt.Sprintf("%s:%s", department, prodType)
+		base, ok = HSNRegistry[key]
+	}
+
+	// 🎯 3. Try Department default
+	if !ok {
+		key = fmt.Sprintf("%s:default", department)
 		base, ok = HSNRegistry[key]
 		if !ok {
-			base = "0000"
+			base = "9999" // Service/Other fallback
 		}
 	}
 
-	// Dynamic suffix based on category name length and first char (just as an example for dynamic generation)
-	suffix := "00"
-	if len(category) > 0 {
-		suffix = fmt.Sprintf("%02d", (int(category[0]) + len(category)) % 100)
-	}
-
+	// Suffix logic: Real HSNs are usually 6 or 8 digits.
+	// We'll use "10" for standard consumer goods.
+	suffix := "10" 
 	return base + suffix
 }

@@ -8,9 +8,11 @@ const (
 	LabelFashionApparel     TaxLabel = "FASHION_APPAREL"
 	LabelFashionFootwear    TaxLabel = "FASHION_FOOTWEAR"
 	LabelFashionAccessories TaxLabel = "FASHION_ACCESSORIES"
-	LabelElectronics        TaxLabel = "ELECTRONICS"
-	LabelAutomotive         TaxLabel = "AUTOMOTIVE"
-	LabelDefault            TaxLabel = "DEFAULT"
+	LabelElectronics         TaxLabel = "ELECTRONICS"
+	LabelElectronicsPhones   TaxLabel = "ELECTRONICS_PHONES"
+	LabelElectronicsLaptops  TaxLabel = "ELECTRONICS_LAPTOPS"
+	LabelAutomotive          TaxLabel = "AUTOMOTIVE"
+	LabelDefault             TaxLabel = "DEFAULT"
 )
 
 // GstSlab represents a GST percentage slab
@@ -45,6 +47,8 @@ var TaxRegistry = map[TaxLabel]interface{}{
 	},
 	LabelFashionAccessories: Slab18,
 	LabelElectronics:        Slab18,
+	LabelElectronicsPhones:  Slab12,
+	LabelElectronicsLaptops: Slab18,
 	LabelAutomotive:         Slab28,
 	LabelDefault:            Slab18,
 }
