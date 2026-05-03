@@ -20,24 +20,27 @@ func NewService(repo *Repository) *Service {
 }
 
 func (s *Service) Create(req CreateProductRequest) (*domain.Product, error) {
-	// 1. Resolve Tax Label and base GST/HSN
-	// We'll use the first variant's price for product-level GST resolution if it's threshold-based
+	// 1. Resolve Representative Price for GST Slab calculation
+	// Real-world logic: The tax slab (5% vs 12%) is often determined by the selling price.
 	representativePrice := 0.0
 	if len(req.Variants) > 0 {
 		representativePrice = req.Variants[0].SellingPrice
 	}
 
+	// 2. Prepare Tax Request for automatic HSN and SalesGST generation
 	taxReq := tax.TaxRequest{
 		Department:   req.CategoryID,
 		Type:         req.FashionType,
 		Category:     req.Category,
-		SubCategory:  req.Gender,
+		SubCategory:  req.Gender, // This maps to gender in your 3-tier system
 		SellingPrice: representativePrice,
 	}
 
+	// 3. Centralized logic: Automatic generation of tax data
 	autoSalesGST := s.taxService.CalculateSalesGST(taxReq)
 	autoHSN := s.taxService.GenerateHSN(taxReq)
 
+	// 4. Map Request to Domain Product
 	product := &domain.Product{
 		BrandID:          req.BrandID,
 		Name:             req.Name,
@@ -47,9 +50,9 @@ func (s *Service) Create(req CreateProductRequest) (*domain.Product, error) {
 		FashionType:      req.FashionType,
 		Gender:           req.Gender,
 		Category:         req.Category,
-		HSN:              autoHSN,
-		PurchaseGST:      req.PurchaseGST, // Admin-editable
-		SalesGST:         autoSalesGST,    // System-generated
+		HSN:              autoHSN,         // System-generated
+		PurchaseGST:      req.PurchaseGST, // Admin-editable (Input GST)
+		SalesGST:         autoSalesGST,    // System-generated (Output GST)
 		Warranty:         req.Warranty,
 		Occasion:         req.Occasion,
 		Season:           req.Season,
@@ -59,14 +62,18 @@ func (s *Service) Create(req CreateProductRequest) (*domain.Product, error) {
 		SelectedSizes:    req.SelectedSizes,
 		SizeGuideData:    req.SizeGuideData,
 		Features:         req.Features,
+		IsActive:         true,
 	}
 
-	// Map specs
+	// 5. Map Tech Specs (for Electronics)
 	for _, spec := range req.Specs {
-		product.Specs = append(product.Specs, domain.SpecEntry{Key: spec.Key, Value: spec.Value})
+		product.Specs = append(product.Specs, domain.SpecEntry{
+			Key:   spec.Key,
+			Value: spec.Value,
+		})
 	}
 
-	// Map variants — auto-generate SKU if not provided
+	// 6. Map Variants & Generate SKUs
 	for _, vd := range req.Variants {
 		v := domain.Variant{
 			Color:        vd.Color,
@@ -76,25 +83,37 @@ func (s *Service) Create(req CreateProductRequest) (*domain.Product, error) {
 			ReorderLevel: vd.ReorderLevel,
 			Images:       vd.Images,
 		}
-		// SKU: use provided or auto-generate
+
+		// SKU logic: Use manual SKU if provided, else auto-generate using industry standard
 		if vd.SKU != "" {
 			v.SKU = vd.SKU
 		} else {
 			var skuAttrs []utils.AttributeDTO
 			for _, a := range vd.Attributes {
-				skuAttrs = append(skuAttrs, utils.AttributeDTO{Key: a.Key, Value: a.Value})
+				skuAttrs = append(skuAttrs, utils.AttributeDTO{
+					Key:   a.Key,
+					Value: a.Value,
+				})
 			}
+			// One-line change SKU generation logic
 			v.SKU = utils.GenerateSKU(req.BrandID, req.Name, vd.ColorName, skuAttrs)
 		}
+
+		// Map Variant Attributes (RAM/Storage or Size/Fit)
 		for _, a := range vd.Attributes {
-			v.Attributes = append(v.Attributes, domain.VariantAttribute{Key: a.Key, Value: a.Value})
+			v.Attributes = append(v.Attributes, domain.VariantAttribute{
+				Key:   a.Key,
+				Value: a.Value,
+			})
 		}
 		product.Variants = append(product.Variants, v)
 	}
 
+	// 7. Persist to Database
 	if err := s.repo.Create(product); err != nil {
 		return nil, err
 	}
+	
 	return product, nil
 }
 
@@ -120,6 +139,7 @@ func (s *Service) Update(id string, req UpdateProductRequest) error {
 	if req.PurchaseGST != nil {
 		updates["purchase_gst"] = *req.PurchaseGST
 	}
+	// Note: SalesGST can be updated manually if there is a legal override
 	if req.SalesGST != nil {
 		updates["sales_gst"] = *req.SalesGST
 	}

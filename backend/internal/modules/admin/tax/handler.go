@@ -14,17 +14,19 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
+// CalculateTax handles the POST /api/v1/admin/tax/calculate request
 func (h *Handler) CalculateTax(c *fiber.Ctx) error {
 	var req CalculateTaxRequest
 	if err := c.BodyParser(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
 	}
 
+	// ⚡ This literal now matches the TaxRequest struct in service.go exactly
 	taxReq := TaxRequest{
 		Department:   req.Department,
 		Type:         req.Type,
 		Category:     req.Category,
-		SubCategory:  req.SubCategory,
+		SubCategory:  req.SubCategory, // Fixed: unknown field error resolved
 		SellingPrice: req.SellingPrice,
 	}
 

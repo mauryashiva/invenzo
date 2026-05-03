@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getSchemaByContext } from "@/common/configs/productinfo-config";
 import { BrandSelector } from "./BrandSelector";
 import { OccasionSelector } from "./OccasionSelector";
 import { HybridDropdown } from "@/components/ui/HybridDropdown";
 import { formatTitleCase, formatModelCode } from "@/lib/utils";
-import { RefreshCw, ChevronRight } from "lucide-react";
+import { generateHsn, calculateSalesGst } from "@/lib/tax-utils"; // 🚀 Centralized Logic
+import { ChevronRight, Zap, RefreshCw } from "lucide-react";
 import type { InventoryProduct } from "@/types/inventory";
 
 interface ProductInfoProps {
@@ -19,6 +20,32 @@ export const ProductInfo = ({ data, onUpdate }: ProductInfoProps) => {
    * 🎯 DYNAMIC SCHEMA RESOLUTION
    */
   const schema = getSchemaByContext(data.categoryId, data.fashionType);
+
+  /**
+   * 🔄 AUTO-TAX & HSN SYNC
+   * Listens to Category and Price changes to update read-only fields live.
+   */
+  useEffect(() => {
+    // 1. Get price from the first variant to determine the threshold slab (5% vs 12% vs 18%)
+    const currentPrice = data.variants?.[0]?.sellingPrice || 0;
+
+    // 2. Generate values using centralized utility
+    const newHsn = generateHsn(data.categoryId, data.fashionType, data.category);
+    const newSalesGst = calculateSalesGst(data.categoryId, data.fashionType, currentPrice, data.category);
+
+    // 3. Only update main state if values actually changed to prevent render loops
+    if (newHsn !== data.hsn || newSalesGst !== data.salesGst) {
+      onUpdate({
+        hsn: newHsn,
+        salesGst: newSalesGst,
+      });
+    }
+  }, [
+    data.categoryId, 
+    data.fashionType, 
+    data.category, 
+    data.variants?.[0]?.sellingPrice // 👈 Re-run when price changes in VariantCard
+  ]);
 
   /**
    * 🛠️ Real-time Normalization
@@ -53,7 +80,6 @@ export const ProductInfo = ({ data, onUpdate }: ProductInfoProps) => {
 
   /**
    * 🏷️ DYNAMIC BREADCRUMB BADGES
-   * Renders the current classification hierarchy
    */
   const renderBreadcrumbs = () => {
     const badgeBase =
@@ -62,18 +88,11 @@ export const ProductInfo = ({ data, onUpdate }: ProductInfoProps) => {
     if (data.categoryId === "electronics") {
       return (
         <div className="flex items-center gap-1.5 ml-4">
-          <span
-            className={`${badgeBase} bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700`}
-          >
+          <span className={`${badgeBase} bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700`}>
             ELECTRONICS
           </span>
-          <ChevronRight
-            size={10}
-            className="text-slate-300 dark:text-slate-700"
-          />
-          <span
-            className={`${badgeBase} bg-indigo-500/10 text-indigo-500 border-indigo-500/20`}
-          >
+          <ChevronRight size={10} className="text-slate-300 dark:text-slate-700" />
+          <span className={`${badgeBase} bg-indigo-500/10 text-indigo-500 border-indigo-500/20`}>
             {data.category || "---"}
           </span>
         </div>
@@ -83,27 +102,15 @@ export const ProductInfo = ({ data, onUpdate }: ProductInfoProps) => {
     if (data.categoryId === "fashion") {
       return (
         <div className="flex items-center gap-1.5 ml-4">
-          <span
-            className={`${badgeBase} bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700`}
-          >
+          <span className={`${badgeBase} bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700`}>
             FASHION
           </span>
-          <ChevronRight
-            size={10}
-            className="text-slate-300 dark:text-slate-700"
-          />
-          <span
-            className={`${badgeBase} bg-amber-500/10 text-amber-600 border-amber-500/20`}
-          >
+          <ChevronRight size={10} className="text-slate-300 dark:text-slate-700" />
+          <span className={`${badgeBase} bg-amber-500/10 text-amber-600 border-amber-500/20`}>
             {data.fashionType || "---"}
           </span>
-          <ChevronRight
-            size={10}
-            className="text-slate-300 dark:text-slate-700"
-          />
-          <span
-            className={`${badgeBase} bg-indigo-500/10 text-indigo-500 border-indigo-500/20`}
-          >
+          <ChevronRight size={10} className="text-slate-300 dark:text-slate-700" />
+          <span className={`${badgeBase} bg-indigo-500/10 text-indigo-500 border-indigo-500/20`}>
             {data.gender || "---"}
           </span>
         </div>
@@ -119,37 +126,41 @@ export const ProductInfo = ({ data, onUpdate }: ProductInfoProps) => {
 
   return (
     <section className="p-8 bg-white dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] space-y-8 shadow-sm animate-in fade-in duration-500">
-      {/* --- Section Header with Breadcrumbs --- */}
+      {/* Header */}
       <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-5">
         <div className="flex items-center">
           <div className="space-y-1">
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
               Step 2: Product Identity
             </h2>
-            <p className="text-[11px] text-slate-500 font-medium">
-              Core attributes mapping
-            </p>
+            <p className="text-[11px] text-slate-500 font-medium">Core attributes mapping</p>
           </div>
           {renderBreadcrumbs()}
         </div>
-        <div className="flex items-center gap-2 bg-indigo-500/5 px-4 py-2 rounded-xl border border-indigo-500/10 text-[10px] font-black text-indigo-600 dark:text-indigo-400">
-          <RefreshCw size={12} className="animate-spin-slow" />
-          AUTO-SYNC ENABLED
-        </div>
+  <div className="flex items-center gap-2 bg-emerald-500/5 px-4 py-2 rounded-xl border border-emerald-500/10 text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+  <Zap size={12} className="fill-emerald-600 animate-pulse" />
+
+  <RefreshCw
+    size={11}
+    className="animate-spin text-emerald-500"
+  />
+
+  SMART TAX SYNC
+</div>
       </div>
 
+      {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
         {schema.map((field) => (
-          <div
-            key={field.name}
-            className={field.type === "textarea" ? "md:col-span-3" : ""}
-          >
+          <div key={field.name} className={field.type === "textarea" ? "md:col-span-3" : ""}>
             <div className="flex justify-between items-center mb-1">
               <label className={labelStyle}>{field.label}</label>
-              {field.name === "brandId" && (
-                <span className="text-[8px] font-bold text-slate-300 dark:text-slate-600 uppercase tracking-tighter">
-                  Smart Filter Active
-                </span>
+              {field.readOnly && (
+                <div className="flex items-center gap-1">
+                  <span className="text-[7px] font-black text-indigo-500 uppercase tracking-widest">
+                    Managed by System
+                  </span>
+                </div>
               )}
             </div>
 
@@ -175,9 +186,7 @@ export const ProductInfo = ({ data, onUpdate }: ProductInfoProps) => {
                 onChange={(val) => handleInputChange(field.name, val)}
                 placeholder={field.placeholder || `Select ${field.label}`}
                 isOpen={openField === field.name}
-                onToggle={() =>
-                  setOpenField(openField === field.name ? null : field.name)
-                }
+                onToggle={() => setOpenField(openField === field.name ? null : field.name)}
                 label={""}
               />
             ) : field.type === "textarea" ? (
@@ -196,32 +205,34 @@ export const ProductInfo = ({ data, onUpdate }: ProductInfoProps) => {
                       ? `${(data as any)[field.name]}%`
                       : (data as any)[field.name] || ""
                   }
-                  onChange={(e) =>
-                    handleInputChange(field.name, e.target.value)
-                  }
+                  onChange={(e) => handleInputChange(field.name, e.target.value)}
                 >
-                  <option value="" disabled>
-                    Select {field.label}
-                  </option>
+                  <option value="" disabled>Select {field.label}</option>
                   {field.options?.map((opt) => (
-                    <option key={opt} value={opt} className="dark:bg-slate-900">
-                      {opt}
-                    </option>
+                    <option key={opt} value={opt} className="dark:bg-slate-900">{opt}</option>
                   ))}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
-                  <ChevronRight
-                    size={14}
-                    className="rotate-90 text-slate-400"
-                  />
+                  <ChevronRight size={14} className="rotate-90 text-slate-400" />
                 </div>
               </div>
             ) : (
               <input
                 type={field.type}
-                className={`${inputStyle} ${field.readOnly ? "bg-slate-200/50 dark:bg-slate-800/30 text-slate-400 cursor-not-allowed border-dashed border-slate-300 dark:border-slate-700" : ""}`}
+                className={`${inputStyle} ${
+                  field.readOnly 
+                    ? "bg-slate-50 dark:bg-slate-800/20 text-slate-500 cursor-not-allowed border-dashed border-slate-200 dark:border-slate-800" 
+                    : ""
+                }`}
                 placeholder={field.placeholder}
-                value={(data as any)[field.name] || ""}
+                // ⚡ FIX: Ensuring live display of generated HSN and SalesGST
+                value={
+                  field.name === "salesGst" 
+                    ? `${data.salesGst || 0}%` 
+                    : field.name === "hsn" 
+                    ? (data.hsn || "---")
+                    : (data as any)[field.name] || ""
+                }
                 onChange={(e) => !field.readOnly && handleInputChange(field.name, e.target.value)}
                 readOnly={field.readOnly}
               />

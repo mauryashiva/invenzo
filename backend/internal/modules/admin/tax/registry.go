@@ -1,24 +1,24 @@
 // internal/modules/admin/tax/registry.go
 package tax
 
+// 1. TYPE DEFINITIONS
 // TaxLabel represents a logical tax category (e.g., "FASHION_APPAREL")
 type TaxLabel string
-
-const (
-	LabelFashionApparel     TaxLabel = "FASHION_APPAREL"
-	LabelFashionFootwear    TaxLabel = "FASHION_FOOTWEAR"
-	LabelFashionAccessories TaxLabel = "FASHION_ACCESSORIES"
-	LabelElectronics         TaxLabel = "ELECTRONICS"
-	LabelElectronicsPhones   TaxLabel = "ELECTRONICS_PHONES"
-	LabelElectronicsLaptops  TaxLabel = "ELECTRONICS_LAPTOPS"
-	LabelAutomotive          TaxLabel = "AUTOMOTIVE"
-	LabelDefault             TaxLabel = "DEFAULT"
-)
 
 // GstSlab represents a GST percentage slab
 type GstSlab float64
 
+// 2. CONSTANTS
 const (
+	LabelFashionApparel     TaxLabel = "FASHION_APPAREL"
+	LabelFashionFootwear    TaxLabel = "FASHION_FOOTWEAR"
+	LabelFashionAccessories TaxLabel = "FASHION_ACCESSORIES"
+	LabelElectronics        TaxLabel = "ELECTRONICS"
+	LabelElectronicsPhones   TaxLabel = "ELECTRONICS_PHONES"
+	LabelElectronicsLaptops  TaxLabel = "ELECTRONICS_LAPTOPS"
+	LabelAutomotive          TaxLabel = "AUTOMOTIVE"
+	LabelDefault             TaxLabel = "DEFAULT"
+
 	Slab0  GstSlab = 0
 	Slab5  GstSlab = 5
 	Slab12 GstSlab = 12
@@ -26,22 +26,24 @@ const (
 	Slab28 GstSlab = 28
 )
 
-// ThresholdConfig defines price-based taxation
+// 3. CONFIGURATION STRUCTS
+// ThresholdConfig defines price-based taxation rules (e.g. for Fashion)
 type ThresholdConfig struct {
 	Threshold float64
 	BelowSlab GstSlab
 	AboveSlab GstSlab
 }
 
+// 4. REGISTRIES
 // TaxRegistry maps labels to GST slabs or threshold configurations
 var TaxRegistry = map[TaxLabel]interface{}{
 	LabelFashionApparel: ThresholdConfig{
-		Threshold: 2500,
+		Threshold: 2500.0,
 		BelowSlab: Slab5,
 		AboveSlab: Slab12,
 	},
 	LabelFashionFootwear: ThresholdConfig{
-		Threshold: 2500,
+		Threshold: 2500.0,
 		BelowSlab: Slab5,
 		AboveSlab: Slab12,
 	},
