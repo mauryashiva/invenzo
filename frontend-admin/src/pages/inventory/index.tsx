@@ -279,12 +279,14 @@ export default function InventoryPage() {
             selectedSizes={state.selectedSizes} // 🚀 Passed for Size dropdown
             purchaseGst={state.purchaseGst}
             salesGst={state.salesGst}
-            onUpdate={(data: Partial<Variant>) =>
+            onUpdate={(idx, data) =>
               dispatch({ type: "UPDATE_VARIANT", index: idx, data })
             }
             onRemove={() => dispatch({ type: "REMOVE_VARIANT", index: idx })}
             brandName={state.brandId}
-            modelNumber={state.name}
+            modelNumber={state.modelNumber}
+            productName={state.name}
+            gender={state.gender}
           />
         ))}
       </div>

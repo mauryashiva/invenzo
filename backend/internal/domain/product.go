@@ -66,6 +66,7 @@ type Product struct {
 	Description string `json:"description"`
 	IsActive    bool   `gorm:"default:true" json:"is_active"`
 
+	Media    []Media   `gorm:"foreignKey:AssociatedID" json:"media,omitempty"`
 	Variants []Variant `gorm:"foreignKey:ProductID" json:"variants,omitempty"`
 
 	CreatedAt time.Time      `json:"created_at"`
@@ -104,6 +105,7 @@ type Variant struct {
 	ReorderLevel int     `gorm:"default:5" json:"reorder_level"`
 	Stock        int     `gorm:"default:0" json:"stock"` // Computed from StockUnits count
 
+	Media []Media `gorm:"foreignKey:AssociatedID" json:"media,omitempty"`
 	Images []string `gorm:"serializer:json" json:"images"`
 
 	CreatedAt time.Time      `json:"created_at"`

@@ -33,7 +33,8 @@ export interface Variant {
   sellingPrice: number;
   reorderLevel: number;
   stock: number;
-  images?: string[];
+  media_ids?: string[]; // ⚡ For transactional linking
+  images?: string[];    // Direct URLs
 }
 
 export interface StockUnit {
@@ -81,4 +82,6 @@ export interface InventoryProduct {
   season?: string;
   fabric?: string;
   careInstructions?: string;
+  media_ids?: string[]; // ⚡ Product-level media
+  images?: string[];    // Direct URLs for previews
 }

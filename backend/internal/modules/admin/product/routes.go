@@ -3,14 +3,13 @@ package product
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/mauryashiva/invenzo-backend/common/database"
+	"github.com/mauryashiva/invenzo-backend/internal/modules/admin/media"
+	"gorm.io/gorm"
 )
 
-// Register mounts product routes onto the admin router group.
-// All routes here are already protected by AdminAuth middleware (applied at router level).
-func Register(router fiber.Router) {
-	repo := NewRepository(database.GetDB())
-	svc := NewService(repo)
+func Register(router fiber.Router, db *gorm.DB, mediaService *media.Service) {
+	repo := NewRepository(db)
+	svc := NewService(repo, mediaService, db)
 	h := NewHandler(svc)
 
 	products := router.Group("/products")

@@ -30,6 +30,7 @@ type CreateProductRequest struct {
 	CareInstructions string                 `json:"care_instructions"`
 
 	Description string         `json:"description"`
+	MediaIDs    []string       `json:"media_ids"` // Product-level media
 	Variants    []VariantDTO   `json:"variants" validate:"required,min=1"`
 }
 
@@ -46,7 +47,8 @@ type VariantDTO struct {
 	BaseCost     float64 `json:"base_cost"`
 	SellingPrice float64 `json:"selling_price"`
 	ReorderLevel int     `json:"reorder_level"`
-	Images       []string `json:"images"`
+	MediaIDs     []string `json:"media_ids"` // Variant-level media
+	Images       []string `json:"images"`    // Backwards compatibility or direct URLs
 }
 
 type VariantAttributeDTO struct {
@@ -61,6 +63,7 @@ type UpdateProductRequest struct {
 	IsActive    *bool   `json:"is_active"`
 	PurchaseGST *float64 `json:"purchase_gst"`
 	SalesGST    *float64 `json:"sales_gst"`
+	MediaIDs    []string `json:"media_ids"`
 }
 
 // ProductListQuery — pagination + filters

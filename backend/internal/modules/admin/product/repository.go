@@ -34,8 +34,10 @@ func (r *Repository) FindAll(query ProductListQuery) ([]domain.Product, int64, e
 
 	db := r.db.Model(&domain.Product{}).
 		Preload("Brand").
+		Preload("Media").
 		Preload("Variants").
-		Preload("Variants.Attributes")
+		Preload("Variants.Attributes").
+		Preload("Variants.Media")
 
 	if query.CategoryID != "" {
 		db = db.Where("category_id = ?", query.CategoryID)
@@ -56,8 +58,10 @@ func (r *Repository) FindByID(id string) (*domain.Product, error) {
 	var product domain.Product
 	err := r.db.
 		Preload("Brand").
+		Preload("Media").
 		Preload("Variants").
 		Preload("Variants.Attributes").
+		Preload("Variants.Media").
 		Where("id = ?", id).
 		First(&product).Error
 	return &product, err

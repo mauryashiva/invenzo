@@ -2,119 +2,147 @@
 package product
 
 import (
+	"fmt"
+
 	"github.com/mauryashiva/invenzo-backend/internal/domain"
+	"github.com/mauryashiva/invenzo-backend/internal/modules/admin/media"
 	"github.com/mauryashiva/invenzo-backend/internal/modules/admin/tax"
 	"github.com/mauryashiva/invenzo-backend/pkg/utils"
+	"gorm.io/gorm"
 )
 
 type Service struct {
-	repo       *Repository
-	taxService *tax.Service
+	repo         *Repository
+	taxService   *tax.Service
+	mediaService *media.Service
+	db           *gorm.DB // For transactions
 }
 
-func NewService(repo *Repository) *Service {
+func NewService(repo *Repository, mediaService *media.Service, db *gorm.DB) *Service {
 	return &Service{
-		repo:       repo,
-		taxService: tax.NewService(),
+		repo:         repo,
+		taxService:   tax.NewService(),
+		mediaService: mediaService,
+		db:           db,
 	}
 }
 
 func (s *Service) Create(req CreateProductRequest) (*domain.Product, error) {
-	// 1. Resolve Representative Price for GST Slab calculation
-	// Real-world logic: The tax slab (5% vs 12%) is often determined by the selling price.
-	representativePrice := 0.0
-	if len(req.Variants) > 0 {
-		representativePrice = req.Variants[0].SellingPrice
-	}
+	var createdProduct *domain.Product
 
-	// 2. Prepare Tax Request for automatic HSN and SalesGST generation
-	taxReq := tax.TaxRequest{
-		Department:   req.CategoryID,
-		Type:         req.FashionType,
-		Category:     req.Category,
-		SubCategory:  req.Gender, // This maps to gender in your 3-tier system
-		SellingPrice: representativePrice,
-	}
-
-	// 3. Centralized logic: Automatic generation of tax data
-	autoSalesGST := s.taxService.CalculateSalesGST(taxReq)
-	autoHSN := s.taxService.GenerateHSN(taxReq)
-
-	// 4. Map Request to Domain Product
-	product := &domain.Product{
-		BrandID:          req.BrandID,
-		Name:             req.Name,
-		ModelNumber:      req.ModelNumber,
-		StyleCode:        req.StyleCode,
-		CategoryID:       req.CategoryID,
-		FashionType:      req.FashionType,
-		Gender:           req.Gender,
-		Category:         req.Category,
-		HSN:              autoHSN,         // System-generated
-		PurchaseGST:      req.PurchaseGST, // Admin-editable (Input GST)
-		SalesGST:         autoSalesGST,    // System-generated (Output GST)
-		Warranty:         req.Warranty,
-		Occasion:         req.Occasion,
-		Season:           req.Season,
-		Fabric:           req.Fabric,
-		CareInstructions: req.CareInstructions,
-		Description:      req.Description,
-		SelectedSizes:    req.SelectedSizes,
-		SizeGuideData:    req.SizeGuideData,
-		Features:         req.Features,
-		IsActive:         true,
-	}
-
-	// 5. Map Tech Specs (for Electronics)
-	for _, spec := range req.Specs {
-		product.Specs = append(product.Specs, domain.SpecEntry{
-			Key:   spec.Key,
-			Value: spec.Value,
-		})
-	}
-
-	// 6. Map Variants & Generate SKUs
-	for _, vd := range req.Variants {
-		v := domain.Variant{
-			Color:        vd.Color,
-			ColorName:    vd.ColorName,
-			BaseCost:     vd.BaseCost,
-			SellingPrice: vd.SellingPrice,
-			ReorderLevel: vd.ReorderLevel,
-			Images:       vd.Images,
+	// 🔒 DATABASE TRANSACTION
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Resolve Representative Price for GST Slab calculation
+		representativePrice := 0.0
+		if len(req.Variants) > 0 {
+			representativePrice = req.Variants[0].SellingPrice
 		}
 
-		// SKU logic: Use manual SKU if provided, else auto-generate using industry standard
-		if vd.SKU != "" {
-			v.SKU = vd.SKU
-		} else {
-			var skuAttrs []utils.AttributeDTO
-			for _, a := range vd.Attributes {
-				skuAttrs = append(skuAttrs, utils.AttributeDTO{
-					Key:   a.Key,
-					Value: a.Value,
-				})
-			}
-			// One-line change SKU generation logic
-			v.SKU = utils.GenerateSKU(req.BrandID, req.Name, vd.ColorName, skuAttrs)
+		// 2. BACKEND SOURCE OF TRUTH: Re-validate Tax & HSN
+		taxReq := tax.TaxRequest{
+			Department:   req.CategoryID,
+			Type:         req.FashionType,
+			Category:     req.Category,
+			SubCategory:  req.Gender,
+			SellingPrice: representativePrice,
+		}
+		autoSalesGST := s.taxService.CalculateSalesGST(taxReq)
+		autoHSN := s.taxService.GenerateHSN(taxReq)
+
+		// 3. Map Request to Domain Product
+		product := &domain.Product{
+			BrandID:          req.BrandID,
+			Name:             req.Name,
+			ModelNumber:      req.ModelNumber,
+			StyleCode:        req.StyleCode,
+			CategoryID:       req.CategoryID,
+			FashionType:      req.FashionType,
+			Gender:           req.Gender,
+			Category:         req.Category,
+			HSN:              autoHSN,
+			PurchaseGST:      req.PurchaseGST,
+			SalesGST:         autoSalesGST,
+			Warranty:         req.Warranty,
+			Occasion:         req.Occasion,
+			Season:           req.Season,
+			Fabric:           req.Fabric,
+			CareInstructions: req.CareInstructions,
+			Description:      req.Description,
+			SelectedSizes:    req.SelectedSizes,
+			SizeGuideData:    req.SizeGuideData,
+			Features:         req.Features,
+			IsActive:         true,
 		}
 
-		// Map Variant Attributes (RAM/Storage or Size/Fit)
-		for _, a := range vd.Attributes {
-			v.Attributes = append(v.Attributes, domain.VariantAttribute{
-				Key:   a.Key,
-				Value: a.Value,
+		// 4. Map Tech Specs
+		for _, spec := range req.Specs {
+			product.Specs = append(product.Specs, domain.SpecEntry{
+				Key:   spec.Key,
+				Value: spec.Value,
 			})
 		}
-		product.Variants = append(product.Variants, v)
-	}
 
-	// 7. Persist to Database
-	if err := s.repo.Create(product); err != nil {
+		// 5. Map Variants & Generate SKUs
+		for _, vd := range req.Variants {
+			v := domain.Variant{
+				Color:        vd.Color,
+				ColorName:    vd.ColorName,
+				BaseCost:     vd.BaseCost,
+				SellingPrice: vd.SellingPrice,
+				ReorderLevel: vd.ReorderLevel,
+				Images:       vd.Images,
+			}
+
+			if vd.SKU != "" {
+				v.SKU = vd.SKU
+			} else {
+				var skuAttrs []utils.AttributeDTO
+				for _, a := range vd.Attributes {
+					skuAttrs = append(skuAttrs, utils.AttributeDTO{Key: a.Key, Value: a.Value})
+				}
+				v.SKU = utils.GenerateSKU(req.BrandID, req.Name, vd.ColorName, skuAttrs)
+			}
+
+			for _, a := range vd.Attributes {
+				v.Attributes = append(v.Attributes, domain.VariantAttribute{Key: a.Key, Value: a.Value})
+			}
+			product.Variants = append(product.Variants, v)
+		}
+
+		// 6. Create Product in DB within transaction
+		if err := tx.Create(product).Error; err != nil {
+			return err
+		}
+
+		// 7. Associate Product Media
+		if len(req.MediaIDs) > 0 {
+			if err := tx.Model(&domain.Media{}).
+				Where("id IN ?", req.MediaIDs).
+				Update("associated_id", product.ID).Error; err != nil {
+				return fmt.Errorf("failed to associate product media: %w", err)
+			}
+		}
+
+		// 8. Associate Variant Media
+		for i, v := range product.Variants {
+			if len(req.Variants[i].MediaIDs) > 0 {
+				if err := tx.Model(&domain.Media{}).
+					Where("id IN ?", req.Variants[i].MediaIDs).
+					Update("associated_id", v.ID).Error; err != nil {
+					return fmt.Errorf("failed to associate variant media: %w", err)
+				}
+			}
+		}
+
+		createdProduct = product
+		return nil
+	})
+
+	if err != nil {
 		return nil, err
 	}
-	
-	return product, nil
+
+	return createdProduct, nil
 }
 
 func (s *Service) List(query ProductListQuery) ([]domain.Product, int64, error) {
@@ -139,10 +167,19 @@ func (s *Service) Update(id string, req UpdateProductRequest) error {
 	if req.PurchaseGST != nil {
 		updates["purchase_gst"] = *req.PurchaseGST
 	}
-	// Note: SalesGST can be updated manually if there is a legal override
 	if req.SalesGST != nil {
 		updates["sales_gst"] = *req.SalesGST
 	}
+
+	// Handle Media Updates if provided
+	if len(req.MediaIDs) > 0 {
+		if err := s.db.Model(&domain.Media{}).
+			Where("id IN ?", req.MediaIDs).
+			Update("associated_id", id).Error; err != nil {
+			return err
+		}
+	}
+
 	return s.repo.Update(id, updates)
 }
 

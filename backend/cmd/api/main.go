@@ -15,6 +15,7 @@ import (
 	adminInventory "github.com/mauryashiva/invenzo-backend/internal/modules/admin/inventory"
 	adminProduct   "github.com/mauryashiva/invenzo-backend/internal/modules/admin/product"
 	adminTax       "github.com/mauryashiva/invenzo-backend/internal/modules/admin/tax"
+	adminMedia     "github.com/mauryashiva/invenzo-backend/internal/modules/admin/media"
 )
 
 func main() {
@@ -24,6 +25,7 @@ func main() {
 
 	// 2. Connect to Supabase PostgreSQL
 	database.Connect()
+	db := database.GetDB()
 
 	// 3. Auto-migrate all domain models (safe to run every boot)
 	migrations.Run()
@@ -52,7 +54,14 @@ func main() {
 
 	// ── PROTECTED ADMIN ROUTES (AdminAuth middleware on entire group) ──────
 	admin := api.Group("/admin", middleware.AdminAuth)
-	adminProduct.Register(admin)
+
+	// Initialize Media module first (Product depends on it)
+	mediaRepo := adminMedia.NewRepository(db)
+	mediaSvc := adminMedia.NewService(mediaRepo)
+	mediaHandler := adminMedia.NewHandler(mediaSvc)
+	adminMedia.RegisterRoutes(admin, mediaHandler)
+
+	adminProduct.Register(admin, db, mediaSvc)
 	adminInventory.Register(admin)
 	adminTax.Register(admin)
 	// Add more admin modules here as you build them:

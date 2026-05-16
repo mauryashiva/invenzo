@@ -25,6 +25,7 @@ func Run() {
 		&domain.Product{},
 		&domain.Variant{},
 		&domain.VariantAttribute{},
+		&domain.Media{},
 
 		// Stock
 		&domain.StockUnit{},

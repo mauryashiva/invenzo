@@ -15,7 +15,11 @@ type Action =
   | { type: "ADD_VARIANT" }
   | { type: "REMOVE_VARIANT"; index: number }
   | { type: "UPDATE_VARIANT"; index: number; data: Partial<Variant> }
-  | { type: "SET_TAX"; payload: { salesGst: number; hsn: string } };
+  | { type: "SET_TAX"; payload: { salesGst: number; hsn: string } }
+  | { type: "ADD_PRODUCT_MEDIA"; payload: { id: string, url: string } }
+  | { type: "REMOVE_PRODUCT_MEDIA"; payload: { id: string, url: string } }
+  | { type: "ADD_VARIANT_MEDIA"; index: number; payload: { id: string, url: string } }
+  | { type: "REMOVE_VARIANT_MEDIA"; index: number; payload: { id: string, url: string } };
 
 const initialState: InventoryProduct = {
   brandId: "",
@@ -36,6 +40,7 @@ const initialState: InventoryProduct = {
   occasion: "",
   season: "",
   fabric: "",
+  media_ids: [],
   // Default Specs for Electronics
   specs: [
     { key: "Display", value: "" },
@@ -55,6 +60,7 @@ const initialState: InventoryProduct = {
       sellingPrice: 0,
       stock: 0,
       reorderLevel: 5,
+      media_ids: [],
       images: [],
     },
   ],
@@ -151,6 +157,42 @@ export function useProductForm() {
             salesGst: action.payload.salesGst,
             hsn: action.payload.hsn || state.hsn,
           };
+
+        case "ADD_PRODUCT_MEDIA":
+          return { 
+            ...state, 
+            media_ids: [...(state.media_ids || []), action.payload.id],
+            images: [...(state.images || []), action.payload.url]
+          };
+
+        case "REMOVE_PRODUCT_MEDIA":
+          return { 
+            ...state, 
+            media_ids: state.media_ids?.filter(id => id !== action.payload.id),
+            images: state.images?.filter(url => url !== action.payload.url)
+          };
+
+        case "ADD_VARIANT_MEDIA": {
+          const newVariants = [...state.variants];
+          const v = newVariants[action.index];
+          newVariants[action.index] = { 
+            ...v, 
+            media_ids: [...(v.media_ids || []), action.payload.id],
+            images: [...(v.images || []), action.payload.url]
+          };
+          return { ...state, variants: newVariants };
+        }
+
+        case "REMOVE_VARIANT_MEDIA": {
+          const newVariants = [...state.variants];
+          const v = newVariants[action.index];
+          newVariants[action.index] = { 
+            ...v, 
+            media_ids: v.media_ids?.filter(id => id !== action.payload.id),
+            images: v.images?.filter(url => url !== action.payload.url)
+          };
+          return { ...state, variants: newVariants };
+        }
 
         default:
           return state;

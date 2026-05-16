@@ -21,9 +21,11 @@ async function request<T>(
   body?: unknown,
   requiresAuth = true,
 ): Promise<ApiResponse<T>> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const headers: Record<string, string> = {};
+
+  if (!(body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
 
   if (requiresAuth) {
     const token = localStorage.getItem("access_token");
@@ -35,7 +37,8 @@ async function request<T>(
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body:
+      body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
   });
 
   // Handle 401 — try to silently refresh token
@@ -84,10 +87,23 @@ async function tryRefreshToken(): Promise<boolean> {
 
 // ── Public HTTP methods (exported for use in service files) ───────────────────
 export const apiClient = {
-  get:    <T>(path: string) => request<T>("GET", path),
-  post:   <T>(path: string, body: unknown) => request<T>("POST", path, body),
-  put:    <T>(path: string, body: unknown) => request<T>("PUT", path, body),
-  patch:  <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
+  get: <T>(path: string, params?: Record<string, any>) => {
+    let url = path;
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+      const queryString = searchParams.toString();
+      if (queryString) url += (url.includes("?") ? "&" : "?") + queryString;
+    }
+    return request<T>("GET", url);
+  },
+  post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
+  put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
+  patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
   delete: <T>(path: string) => request<T>("DELETE", path),
   // Public (no auth token)
   publicPost: <T>(path: string, body: unknown) =>
