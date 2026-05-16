@@ -20,6 +20,7 @@ async function request<T>(
   path: string,
   body?: unknown,
   requiresAuth = true,
+  signal?: AbortSignal,
 ): Promise<ApiResponse<T>> {
   const headers: Record<string, string> = {};
 
@@ -39,6 +40,7 @@ async function request<T>(
     headers,
     body:
       body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+    signal,
   });
 
   // Handle 401 — try to silently refresh token
@@ -87,7 +89,11 @@ async function tryRefreshToken(): Promise<boolean> {
 
 // ── Public HTTP methods (exported for use in service files) ───────────────────
 export const apiClient = {
-  get: <T>(path: string, params?: Record<string, any>) => {
+  get: <T>(
+    path: string,
+    params?: Record<string, any>,
+    signal?: AbortSignal,
+  ) => {
     let url = path;
     if (params) {
       const searchParams = new URLSearchParams();
@@ -99,13 +105,17 @@ export const apiClient = {
       const queryString = searchParams.toString();
       if (queryString) url += (url.includes("?") ? "&" : "?") + queryString;
     }
-    return request<T>("GET", url);
+    return request<T>("GET", url, undefined, true, signal);
   },
-  post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
-  put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
-  patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
-  delete: <T>(path: string) => request<T>("DELETE", path),
+  post: <T>(path: string, body: unknown, signal?: AbortSignal) =>
+    request<T>("POST", path, body, true, signal),
+  put: <T>(path: string, body: unknown, signal?: AbortSignal) =>
+    request<T>("PUT", path, body, true, signal),
+  patch: <T>(path: string, body: unknown, signal?: AbortSignal) =>
+    request<T>("PATCH", path, body, true, signal),
+  delete: <T>(path: string, signal?: AbortSignal) =>
+    request<T>("DELETE", path, undefined, true, signal),
   // Public (no auth token)
-  publicPost: <T>(path: string, body: unknown) =>
-    request<T>("POST", path, body, false),
+  publicPost: <T>(path: string, body: unknown, signal?: AbortSignal) =>
+    request<T>("POST", path, body, false, signal),
 };

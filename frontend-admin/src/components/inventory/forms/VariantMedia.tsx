@@ -15,8 +15,11 @@ interface VariantMediaProps {
 interface LocalPreview {
   id: string;
   url: string;
+  file: File;
   isUploading: boolean;
   isVideo: boolean;
+  uploadedId?: string;
+  uploadError?: string;
 }
 
 export const VariantMedia = ({
@@ -27,7 +30,29 @@ export const VariantMedia = ({
   uploadMetadata,
 }: VariantMediaProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllers = useRef<Record<string, AbortController>>({});
   const [localPreviews, setLocalPreviews] = useState<LocalPreview[]>([]);
+
+  const cancelLocalPreview = async (previewId: string) => {
+    const preview = localPreviews.find((item) => item.id === previewId);
+    if (!preview) return;
+
+    if (abortControllers.current[previewId]) {
+      abortControllers.current[previewId].abort();
+      delete abortControllers.current[previewId];
+    }
+
+    if (preview.uploadedId) {
+      try {
+        await mediaApi.delete(preview.uploadedId);
+      } catch (error) {
+        console.error("Failed to delete uploaded preview media:", error);
+      }
+    }
+
+    setLocalPreviews((prev) => prev.filter((item) => item.id !== previewId));
+    URL.revokeObjectURL(preview.url);
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -36,32 +61,66 @@ export const VariantMedia = ({
     const newLocalPreviews = files.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       url: URL.createObjectURL(file),
+      file,
       isUploading: true,
       isVideo: file.type.startsWith("video/"),
     }));
 
     setLocalPreviews((prev) => [...prev, ...newLocalPreviews]);
 
-    files.forEach(async (file, index) => {
-      const currentLocalId = newLocalPreviews[index].id;
+    newLocalPreviews.forEach(async (preview) => {
+      const controller = new AbortController();
+      abortControllers.current[preview.id] = controller;
+
       try {
-        const res = await mediaApi.upload({
-          ...uploadMetadata,
-          file,
-        });
+        const res = await mediaApi.upload(
+          {
+            ...uploadMetadata,
+            file: preview.file,
+          },
+          controller.signal,
+        );
 
         if (res.success && res.data) {
+          setLocalPreviews((prev) =>
+            prev.filter((item) => item.id !== preview.id),
+          );
+          URL.revokeObjectURL(preview.url);
+
           onAddMedia({
             id: res.data.id,
             url: res.data.url,
           });
+        } else {
+          setLocalPreviews((prev) =>
+            prev.map((item) =>
+              item.id === preview.id
+                ? {
+                    ...item,
+                    isUploading: false,
+                    uploadError: res.error ?? "Upload failed",
+                  }
+                : item,
+            ),
+          );
         }
       } catch (error) {
-        console.error(`Failed to upload ${file.name}:`, error);
+        if ((error as Error).name !== "AbortError") {
+          console.error(`Failed to upload ${preview.file.name}:`, error);
+          setLocalPreviews((prev) =>
+            prev.map((item) =>
+              item.id === preview.id
+                ? {
+                    ...item,
+                    isUploading: false,
+                    uploadError: "Upload failed",
+                  }
+                : item,
+            ),
+          );
+        }
       } finally {
-        // Note: We don't revoke here because the real image might still be loading
-        // A better place is a cleanup effect or after a timeout
-        setLocalPreviews((prev) => prev.filter((p) => p.id !== currentLocalId));
+        delete abortControllers.current[preview.id];
       }
     });
 
@@ -79,33 +138,37 @@ export const VariantMedia = ({
     }
   };
 
-  const isVideo = (url: string) => 
+  const isVideo = (url: string) =>
     url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes("video/upload");
 
   return (
     <div className="flex flex-wrap gap-4 pt-2">
       {/* 🖼️ REAL PREVIEWS (After successful upload) */}
       {images.map((url, idx) => (
-        <div 
-          key={`${url}-${idx}`} 
+        <div
+          key={`${url}-${idx}`}
           className="relative group w-24 h-24 rounded-2xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-slate-50 dark:bg-slate-900 shadow-sm transition-all hover:border-indigo-500/50"
         >
           {isVideo(url) ? (
             <div className="w-full h-full flex items-center justify-center bg-slate-900">
               <Film size={24} className="text-slate-500 z-10" />
-              <video 
-                src={url} 
+              <video
+                src={url}
                 className="absolute inset-0 w-full h-full object-cover opacity-60"
                 muted
-                onMouseOver={(e) => (e.currentTarget as HTMLVideoElement).play()}
-                onMouseOut={(e) => (e.currentTarget as HTMLVideoElement).pause()}
+                onMouseOver={(e) =>
+                  (e.currentTarget as HTMLVideoElement).play()
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget as HTMLVideoElement).pause()
+                }
               />
             </div>
           ) : (
-            <img 
-              src={url} 
-              alt="Product variant" 
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+            <img
+              src={url}
+              alt="Product variant"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             />
           )}
 
@@ -121,17 +184,42 @@ export const VariantMedia = ({
 
       {/* 🔄 LOCAL LOADING PREVIEWS (Instant feedback) */}
       {localPreviews.map((preview) => (
-        <div key={preview.id} className="relative w-24 h-24 rounded-2xl border-2 border-indigo-200 dark:border-indigo-900/50 overflow-hidden bg-slate-50 dark:bg-slate-900 shadow-inner">
-           {preview.isVideo ? (
-             <div className="w-full h-full flex items-center justify-center">
-               <Film size={20} className="text-indigo-300 animate-pulse" />
-             </div>
-           ) : (
-             <img src={preview.url} className="w-full h-full object-cover blur-[2px] opacity-40" />
-           )}
-           <div className="absolute inset-0 flex items-center justify-center bg-indigo-500/5">
-              <Loader2 size={24} className="animate-spin text-indigo-600" />
-           </div>
+        <div
+          key={preview.id}
+          className="relative w-24 h-24 rounded-2xl border-2 overflow-hidden bg-slate-50 dark:bg-slate-900 shadow-inner"
+        >
+          <button
+            type="button"
+            onClick={() => cancelLocalPreview(preview.id)}
+            className="absolute top-1.5 right-1.5 z-20 rounded-lg bg-rose-500 p-1.5 text-white shadow-xl hover:scale-110 transition-opacity"
+          >
+            <X size={12} />
+          </button>
+
+          {preview.isVideo ? (
+            <div className="w-full h-full flex items-center justify-center bg-slate-900">
+              <Film size={20} className="text-indigo-300 animate-pulse" />
+            </div>
+          ) : (
+            <img
+              src={preview.url}
+              className="w-full h-full object-cover transition-all duration-200"
+              alt="Uploading preview"
+            />
+          )}
+
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/30 p-2 text-center text-xs text-white">
+            {preview.isUploading ? (
+              <>
+                <Loader2 size={20} className="animate-spin text-indigo-200" />
+                <span className="mt-2">Uploading...</span>
+              </>
+            ) : preview.uploadError ? (
+              <span className="text-rose-200">{preview.uploadError}</span>
+            ) : (
+              <span className="text-emerald-200">Upload complete</span>
+            )}
+          </div>
         </div>
       ))}
 
@@ -153,7 +241,9 @@ export const VariantMedia = ({
           <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-500/10 transition-colors">
             <Plus size={20} />
           </div>
-          <span className="text-[9px] font-black mt-2 uppercase tracking-widest">Add Media</span>
+          <span className="text-[9px] font-black mt-2 uppercase tracking-widest">
+            Add Media
+          </span>
         </button>
       </div>
     </div>
